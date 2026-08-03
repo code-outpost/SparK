@@ -13,8 +13,39 @@ function tick(){
 }
 setInterval(tick,1000);tick();
 
+/* ---------- 侧边栏抽屉 ---------- */
+function toggleSidebar(){
+  var sb=document.getElementById('sidebar');
+  var ov=document.getElementById('sidebarOverlay');
+  var hb=document.getElementById('hamburger');
+  if(!sb)return;
+  var isOpen=sb.classList.toggle('on');
+  if(ov)ov.classList.toggle('on',isOpen);
+  if(hb)hb.classList.toggle('on',isOpen);
+  document.body.style.overflow=isOpen?'hidden':'';
+}
+window.toggleSidebar=toggleSidebar;
+
+/* ---------- 侧边栏抽屉 ---------- */
+function toggleSidebar(){
+  var sb=document.getElementById('sidebar');
+  var ov=document.getElementById('sidebarOverlay');
+  var hb=document.getElementById('hamburger');
+  if(!sb)return;
+  var isOpen=sb.classList.toggle('on');
+  if(ov)ov.classList.toggle('on',isOpen);
+  if(hb)hb.classList.toggle('on',isOpen);
+  document.body.style.overflow=isOpen?'hidden':'';
+}
 /* ---------- 导航 ---------- */
 function nav(el,id){
+  var sb=document.getElementById('sidebar');
+  var ov=document.getElementById('sidebarOverlay');
+  var hb=document.getElementById('hamburger');
+  if(sb)sb.classList.remove('on');
+  if(ov)ov.classList.remove('on');
+  if(hb)hb.classList.remove('on');
+  document.body.style.overflow='';
   document.querySelectorAll('.nav-item').forEach(function(x){x.classList.remove('on')});
   el.classList.add('on');
   document.querySelectorAll('.sect').forEach(function(x){x.classList.remove('on')});
