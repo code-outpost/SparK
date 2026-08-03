@@ -57,7 +57,6 @@ textarea{font-family:var(--mono);resize:vertical}
 .hamburger.on span:nth-child(2){opacity:0}
 .hamburger.on span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:98;backdrop-filter:blur(3px)}
-.sidebar-overlay.on{display:block}
 .layout{display:grid;grid-template-columns:218px 1fr;gap:16px;padding:16px 20px;max-width:1480px;margin:0 auto;min-height:calc(100vh - 54px);align-items:start}
 .sidebar{position:sticky;top:66px;max-height:calc(100vh - 80px);overflow-y:auto}
 .nav-card{background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:12px}
@@ -135,7 +134,7 @@ textarea{font-family:var(--mono);resize:vertical}
 .pls{animation:pls 2s infinite}
 .full{grid-column:1/-1}
 @media(max-width:900px){.layout{padding:12px}.panel-grid{grid-template-columns:1fr}.sp-cards{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}.frm{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.hamburger{display:flex}.hdr-l>div:not(.hamburger):not(.hdr-logo){display:none}.sidebar-overlay{display:block}.sidebar{position:fixed;top:0;left:-260px;width:260px;height:100vh;z-index:99;background:var(--bg2);border-right:1px solid var(--bd);padding-top:60px;overflow-y:auto;transition:left .3s ease;max-height:none}.sidebar.on{left:0}.sidebar .nav-card{border:none;border-radius:0;padding:8px}.layout{display:block;padding:12px}.main{flex-direction:column}.panel-grid{grid-template-columns:1fr}.frm{grid-template-columns:1fr}.frm3,.frm4{grid-template-columns:1fr 1fr!important}.hero{padding:20px 16px}.hero-title{font-size:36px}.stat-grid{grid-template-columns:1fr 1fr}.sp-cards{grid-template-columns:1fr 1fr}.siyao-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.hamburger{display:flex}.hdr-l>div:not(.hamburger):not(.hdr-logo){display:none}.sidebar-overlay{display:none}.sidebar-overlay.on{display:block}.sidebar{position:fixed;top:0;left:-260px;width:260px;height:100vh;z-index:99;background:var(--bg2);border-right:1px solid var(--bd);padding-top:60px;overflow-y:auto;transition:left .3s ease;max-height:none}.sidebar.on{left:0}.sidebar .nav-card{border:none;border-radius:0;padding:8px}.layout{display:block;padding:12px}.main{flex-direction:column}.panel-grid{grid-template-columns:1fr}.frm{grid-template-columns:1fr}.frm3,.frm4{grid-template-columns:1fr 1fr!important}.hero{padding:20px 16px}.hero-title{font-size:36px}.stat-grid{grid-template-columns:1fr 1fr}.sp-cards{grid-template-columns:1fr 1fr}.siyao-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.hero-title{font-size:28px}.stat-grid{grid-template-columns:1fr}.hero{padding:16px 12px}.frm{grid-template-columns:1fr}.frm3,.frm4{grid-template-columns:1fr 1fr!important}.siyao-grid{grid-template-columns:1fr 1fr}.tbl{font-size:10px}}
 /* new: 四遥 / 进制 / 浮点 */
 .siyao-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 12px}
@@ -1117,7 +1116,7 @@ Model 101/103 单相/三相逆变器
     <div class="sect" id="s-about">
       <div class="card" style="margin-bottom:14px">
         <div class="card-title"><div class="dot"></div>工具简介</div>
-        <div class="about-d">SparK 是面向<b>数字能源（光伏/储能/光储）控制器测试工程师</b>的本地效率工具箱，覆盖<b>求职准备</b>与<b>日常测试计算</b>两条主线。所有功能离线运行，数据仅存于本地浏览器。</div>
+        <div class="about-d">SparK 是面向<b>光伏/储能/光储测试</b>的本地效率工具箱，覆盖<b>求职准备</b>与<b>日常测试计算</b>两条主线。所有功能离线运行，数据仅存于本地浏览器。</div>
       </div>
       <div class="about-list">
         <div class="about-item"><div class="about-badge">求</div><div class="about-body"><div class="about-t">求职加速器</div><div class="about-d">简历/自我介绍生成器（STAR 化）、面试题库、能力雷达图，帮你系统梳理经历、快速备战面试。</div></div></div>
