@@ -26,17 +26,6 @@ function toggleSidebar(){
 }
 window.toggleSidebar=toggleSidebar;
 
-/* ---------- 侧边栏抽屉 ---------- */
-function toggleSidebar(){
-  var sb=document.getElementById('sidebar');
-  var ov=document.getElementById('sidebarOverlay');
-  var hb=document.getElementById('hamburger');
-  if(!sb)return;
-  var isOpen=sb.classList.toggle('on');
-  if(ov)ov.classList.toggle('on',isOpen);
-  if(hb)hb.classList.toggle('on',isOpen);
-  document.body.style.overflow=isOpen?'hidden':'';
-}
 /* ---------- 导航 ---------- */
 function nav(el,id){
   var sb=document.getElementById('sidebar');
@@ -66,75 +55,512 @@ window.rst=rst;
 /* ====================================================================== */
 /* 简历生成器                                                            */
 /* ====================================================================== */
-var RESUME_FIELDS=[
-  {k:'name',t:'项目/任务名称'},
-  {k:'duty',t:'我的职责'},
-  {k:'act',t:'关键动作（做了什么）'},
-  {k:'res',t:'量化成果（数据/指标）'}
-];
-function addResumeRow(){
-  var box=document.getElementById('r-projects');
-  var idx=box.children.length+1;
-  var div=document.createElement('div');
-  div.style.cssText='border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--bg2)';
-  div.innerHTML='<div style="font-size:10px;color:var(--acc);font-weight:700;margin-bottom:8px">经历 '+idx+'</div>'+
-    '<div class="frm">'+
-    '<div class="lbl"><div class="lbl-txt">项目/任务名称</div><input type="text" data-k="name" placeholder="如 工商业储能站级联调"></div>'+
-    '<div class="lbl"><div class="lbl-txt">我的职责</div><input type="text" data-k="duty" placeholder="如 负责 SPPC 站级协调策略验证"></div>'+
-    '<div class="lbl"><div class="lbl-txt">关键动作</div><input type="text" data-k="act" placeholder="如 设计光储功率分配测试用例并执行"></div>'+
-    '<div class="lbl"><div class="lbl-txt">量化成果</div><input type="text" data-k="res" placeholder="如 发现 3 项功率越限，效率提升 2%"></div>'+
-    '</div>';
-  box.appendChild(div);
-}
-function readResume(){
-  var rows=document.getElementById('r-projects').children, out=[];
-  for(var i=0;i<rows.length;i++){
-    var o={};
-    rows[i].querySelectorAll('input').forEach(function(inp){o[inp.dataset.k]=inp.value.trim();});
-    if(o.name||o.duty||o.act||o.res)out.push(o);
-  }
-  return out;
-}
-var TARGET_SUMMARY={
-  '测试工程师':'本人从事数字能源控制器集成与验证测试，负责数采（子阵级）与 SPPC（站级）的测试验证，覆盖工商业光伏、纯光、纯储及光储一体化等多类场景，擅长通信协议对接、站级协调控制与边界场景测试。',
-  '系统集成工程师':'本人具备数字能源系统级联调经验，熟悉光伏/储能子阵与站级控制器（SPPC）的集成验证流程，能够在复杂场景下定位通信、控制与功率分配类问题，推动系统从调通到稳定。',
-  '验证工程师':'本人专注新能源控制器的功能与性能验证，建立并维护数采与站级测试用例库，覆盖纯光、纯储、光储及工商业场景，强调可追溯的测试证据与缺陷闭环管理。',
-  '技术支持工程师':'本人熟悉数字能源产品在现场的交付与问题定位，能够从测试结果反推现场现象，快速判断通信、协议与站级策略类故障，支撑客户侧高效排障。',
-  '测试开发工程师':'本人将重复性测试动作脚本化/工具化，构建数采与站级测试的效率工具（如点位计算、协议换算、场景模板），把测试工程师从手工计算中解放出来。'
+/* ====================================================================== */
+/* 简历生成器（模板化可视化编辑器：选模板→左编辑→右预览→导出）            */
+/* ====================================================================== */
+var TPL_NAMES={modern:'现代两栏',elegant:'优雅',creative:'创意',timeline:'时间轴',minimalist:'极简','left-right':'模块标题',swiss:'瑞士美学',classic:'经典',editorial:'西报风'};
+var TPL_TWO=['modern'];
+var TPL_SIDE=['basic','skills','education'];
+var RESUME_STATE={tplId:null,data:null,_t:null};
+var RESUME_LS='spark_resume_';
+var RESUME_ICONS={
+  Mail:'<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  Phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  MapPin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  CalendarRange:'<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>',
+  Briefcase:'<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  Globe:'<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/>'
 };
-function genResume(){
-  var name=(document.getElementById('r-name').value||'').trim();
-  var target=document.getElementById('r-target').value;
-  var projs=readResume();
-  var md='# 简历要点 · '+(name||'（未填姓名）')+'\n';
-  md+='> 目标岗位：**'+target+'**\n\n';
-  md+='## 个人总结\n'+ (TARGET_SUMMARY[target]||TARGET_SUMMARY['测试工程师'])+'\n\n';
-  md+='## 项目经历（STAR 要点）\n';
-  if(projs.length===0){
-    md+='_（请在左侧至少填写一条经历，含职责 / 动作 / 量化成果）_\n';
-  }else{
-    projs.forEach(function(p,i){
-      md+=(i+1)+'. **'+(p.name||'未命名任务')+'**\n';
-      md+='   - 职责：'+(p.duty||'—')+'\n';
-      md+='   - 动作：'+(p.act||'—')+'\n';
-      md+='   - 成果：'+(p.res||'—')+'\n';
-    });
+function rEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function rIcon(name,color){if(!RESUME_ICONS[name])return '';return '<svg class="ri" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="'+RESUME_ICONS[name]+'"/></svg>';}
+function htmlToList(str){
+  if(!str)return [];
+  var m=str.match(/<li[^>]*>(.*?)<\/li>/gi);
+  if(!m){
+    return str.split(/\n|<br\s*\/?>/i).map(function(s){return s.replace(/<[^>]+>/g,'').trim();}).filter(Boolean);
   }
-  md+='\n## 核心能力关键词\n';
-  md+='数采(子阵级) · SPPC(站级) · 光储协调 · Modbus/IEC61850 · 一次调频 · QU 无功 · 站级 SOC · 测试用例设计 · 缺陷闭环\n';
-  document.getElementById('r-out').textContent=md;
+  return m.map(function(s){return s.replace(/<li[^>]*>|<\/li>/gi,'').replace(/<[^>]+>/g,'').trim();}).filter(Boolean);
 }
-function genIntro(){
-  var name=(document.getElementById('r-name').value||'').trim()||'我';
-  var target=document.getElementById('r-target').value;
-  var projs=readResume();
-  var exp = projs.length? ('，期间我'+(projs[0].act||'参与数采与站级验证')) : '，主要负责数采（子阵级）与 SPPC（站级）的测试验证';
-  var txt=name+'您好，我是'+name+'，一名数字能源控制器测试工程师。我主要负责光伏/储能场景下的控制器集成与验证测试'+exp+
-    '，覆盖工商业、纯光、纯储和光储一体化场景。我熟悉通信协议对接、站级协调控制与边界场景测试，'+
-    '也习惯把重复计算做成小工具提升效率。希望应聘「'+target+'」岗位，继续在新能源测试领域深耕。';
-  document.getElementById('r-intro').textContent=txt;
+function listToHtml(arr){
+  var items=(arr||[]).map(function(s){return String(s==null?'':s).trim();}).filter(Boolean);
+  return items.length?'<ul>'+items.map(function(s){return '<li>'+rEsc(s)+'</li>';}).join('')+'</ul>':'';
 }
-window.addResumeRow=addResumeRow;window.genResume=genResume;window.genIntro=genIntro;
+function cleanResumeData(d){
+  var x=JSON.parse(JSON.stringify(d));
+  delete x._skillArr;
+  (x.experience||[]).forEach(function(it){delete it._detailsArr;});
+  (x.projects||[]).forEach(function(it){delete it._detailsArr;});
+  (x.education||[]).forEach(function(it){delete it._detailsArr;});
+  return x;
+}
+function resumeSet(path,val){
+  var d=RESUME_STATE.data,keys=path.split('.'),o=d,i;
+  for(i=0;i<keys.length-1;i++){
+    var k=keys[i];
+    if(Array.isArray(o[k])){
+      var id=keys[i+1],found=null;
+      o[k].forEach(function(x){if(String(x.id)===id)found=x;});
+      if(!found){found={id:id};o[k].push(found);}
+      o=found;i++;
+    }else{if(o[k]==null)o[k]={};o=o[k];}
+  }
+  o[keys[keys.length-1]]=val;
+  resumeSched();
+}
+function rNewItem(sec){
+  var id='u'+Date.now()+Math.floor(Math.random()*999);
+  if(sec==='experience')return {id:id,company:'',position:'',date:'',visible:true,details:''};
+  if(sec==='projects')return {id:id,name:'',role:'',date:'',description:'',visible:true};
+  if(sec==='education')return {id:id,school:'',major:'',degree:'',startDate:'',endDate:'',gpa:'',description:'',visible:true};
+  return {id:id};
+}
+function resumePick(){
+  var box=document.getElementById('r-tpl-grid');if(!box)return;
+  var T=window.RESUME_TEMPLATES||{},keys=Object.keys(T);
+  if(!keys.length){box.innerHTML='<div class="rst-empty">未找到模板文件（jl/templates.js）</div>';return;}
+  box.innerHTML=keys.map(function(id){
+    var t=T[id],b=t.basic||{},tc=(t.globalSettings&&t.globalSettings.themeColor)||'#000';
+    var pdf=t.pdfId||(t.id&&String(t.id).split('-')[0].slice(0,6))||'';
+    var pdfEl=pdf?'<embed src="jl/'+rEsc(pdf)+'.pdf#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" class="r-tpl-pdf">':'<span style="color:'+rEsc(tc)+'">'+rEsc(b.name||'简历')+'</span>';
+    return '<div class="r-tpl" onclick="resumeOpen(\''+id+'\')">'+
+      '<div class="r-tpl-prev" style="background:'+rEsc(tc)+'14">'+pdfEl+'</div>'+
+      '<div class="r-tpl-name">'+rEsc(TPL_NAMES[id]||id)+'</div>'+
+      '<div class="r-tpl-sub">'+rEsc(b.title||'')+'</div></div>';
+  }).join('');
+}
+function resumeOpen(id){
+  var T=window.RESUME_TEMPLATES||{};if(!T[id])return;
+  var saved=null;try{var raw=localStorage.getItem(RESUME_LS+id);if(raw)saved=JSON.parse(raw);}catch(e){}
+  RESUME_STATE.tplId=id;
+  RESUME_STATE.data=saved?saved:JSON.parse(JSON.stringify(T[id]));
+  var pk=document.getElementById('r-tpl-pick'),ed=document.getElementById('r-editor');
+  if(pk)pk.style.display='none';if(ed)ed.style.display='';
+  var ct=document.getElementById('r-cur-tpl');if(ct)ct.textContent=TPL_NAMES[id]||id;
+  resumeForm();resumePreview();
+  if(typeof window!=='undefined'&&window.innerWidth<=900){var eb=document.querySelector('#r-editor .r-editor-body');if(eb){eb.classList.add('r-show-form');var mb=document.querySelectorAll('.r-mtoggle button');for(var i=0;i<mb.length;i++){mb[i].classList.toggle('on',mb[i].getAttribute('data-mode')==='form');}}}
+}
+function resumeBack(){
+  var ed=document.getElementById('r-editor'),pk=document.getElementById('r-tpl-pick');
+  if(ed)ed.style.display='none';if(pk)pk.style.display='';
+  RESUME_STATE.data=null;RESUME_STATE.tplId=null;resumePick();
+}
+function resumeForm(){
+  var d=RESUME_STATE.data;if(!d)return;var box=document.getElementById('r-form');if(!box)return;
+  d._skillArr=htmlToList(d.skillContent||'');
+  (d.experience||[]).forEach(function(it){it._detailsArr=htmlToList(it.details||'');});
+  (d.projects||[]).forEach(function(it){it._detailsArr=htmlToList(it.description||'');});
+  (d.education||[]).forEach(function(it){it._detailsArr=htmlToList(it.description||'');});
+  var html='';
+  (d.menuSections||[]).forEach(function(ms){
+    if(!ms.enabled)return;
+    html+='<div class="r-fsec"><div class="r-fsec-t">'+rEsc(ms.title)+'</div>';
+    if(ms.id==='basic')html+=rFormBasic(d);
+    else if(ms.id==='skills')html+=rFormSkills(d);
+    else if(ms.id==='experience')html+=rFormList(d,'experience','公司','职位','关键职责 / 业绩','details',true);
+    else if(ms.id==='projects')html+=rFormList(d,'projects','项目名','角色','项目描述','description',false);
+    else if(ms.id==='education')html+=rFormList(d,'education','学校','专业','在校经历 / 主修课程','description',false);
+    html+='</div>';
+  });
+  box.innerHTML=html;
+}
+function rFormSkills(d){
+  var arr=d._skillArr||[],h='';
+  h+='<div class="r-list" id="r-skill-list">';
+  arr.forEach(function(s,i){
+    h+='<div class="r-row"><input type="text" data-skill-idx="'+i+'" value="'+rEsc(s)+'" placeholder="如：熟练使用 Modbus / IEC 104 协议">';
+    h+='<button class="r-x" data-action="del-skill" data-idx="'+i+'" title="删除">×</button></div>';
+  });
+  h+='</div>';
+  h+='<button class="r-add" data-action="add-skill">+ 添加技能</button>';
+  return h;
+}
+function rFormBasic(d){
+  var b=d.basic||{},h='';
+  (b.fieldOrder||[]).forEach(function(f){
+    var v=b[f.key]||'';
+    h+='<div class="lbl"><div class="lbl-txt">'+rEsc(f.label)+'</div><input type="text" data-bind="basic.'+rEsc(f.key)+'" value="'+rEsc(v)+'"></div>';
+  });
+  h+='<div class="r-sub">自定义字段</div>';
+  (b.customFields||[]).forEach(function(cf){
+    h+='<div class="r-cf"><input class="r-cf-l" type="text" data-bind="basic.customFields.'+rEsc(cf.id)+'.label" value="'+rEsc(cf.label)+'" placeholder="标签"><input class="r-cf-v" type="text" data-bind="basic.customFields.'+rEsc(cf.id)+'.value" value="'+rEsc(cf.value)+'" placeholder="内容"><button class="r-x" data-action="del-cf" data-id="'+rEsc(cf.id)+'" title="删除">×</button></div>';
+  });
+  h+='<button class="r-add" data-action="add-cf">+ 自定义字段</button>';
+  h+='<label class="r-chk"><input type="checkbox" data-bind="basic.photoConfig.visible" '+(b.photoConfig&&b.photoConfig.visible?'checked':'')+'> 显示头像</label>';
+  h+='<input type="file" id="r-photo" accept="image/*" class="r-photo-in" title="上传头像图片">';
+  h+='<div class="r-hint" style="margin-top:2px">支持 jpg/png，图片仅存在本地浏览器，不会上传服务器。</div>';
+  h+='<div class="r-sub">个人评价</div><textarea class="r-ta" data-bind="selfEvaluationContent" rows="4" placeholder="一句话概括你的优势与方向，将显示在简历中">'+(d.selfEvaluationContent||'')+'</textarea>';
+  return h;
+}
+function rFormList(d,sec,ph1,ph2,phDetail,bindDetail,hasRole){
+  var mainF=sec==='education'?'school':(sec==='projects'?'name':'company');
+  var h='';
+  (d[sec]||[]).forEach(function(it){
+    h+='<div class="r-li">';
+    h+='<div class="r-li-h"><input class="r-in1" type="text" data-bind="'+sec+'.'+rEsc(it.id)+'.'+mainF+'" value="'+rEsc(it[mainF]||'')+'" placeholder="'+ph1+'">';
+    if(hasRole)h+='<input class="r-in2" type="text" data-bind="'+sec+'.'+rEsc(it.id)+'.position" value="'+rEsc(it.position||'')+'" placeholder="'+ph2+'">';
+    h+='<button class="r-x" data-action="del" data-sec="'+sec+'" data-id="'+rEsc(it.id)+'" title="删除">×</button></div>';
+    h+='<input class="r-in3" type="text" data-bind="'+sec+'.'+rEsc(it.id)+'.date" value="'+rEsc(it.date||'')+'" placeholder="时间，如 2021.07 - 2024.12">';
+    if(sec==='education'){
+      h+='<div class="r-inline"><input type="text" data-bind="'+sec+'.'+rEsc(it.id)+'.major" value="'+rEsc(it.major||'')+'" placeholder="专业"><input type="text" data-bind="'+sec+'.'+rEsc(it.id)+'.degree" value="'+rEsc(it.degree||'')+'" placeholder="学位"><input type="text" data-bind="'+sec+'.'+rEsc(it.id)+'.gpa" value="'+rEsc(it.gpa||'')+'" placeholder="GPA"></div>';
+    }
+    var arr=it._detailsArr||[];
+    h+='<div class="r-sub">'+phDetail+'（逐条填写）</div>';
+    h+='<div class="r-list">';
+    arr.forEach(function(s,i){
+      h+='<div class="r-row"><input type="text" data-detail-sec="'+sec+'" data-detail-id="'+rEsc(it.id)+'" data-detail-idx="'+i+'" value="'+rEsc(s)+'" placeholder="输入一条具体成果 / 职责">';
+      h+='<button class="r-x" data-action="del-detail" data-sec="'+sec+'" data-id="'+rEsc(it.id)+'" data-idx="'+i+'" title="删除">×</button></div>';
+    });
+    h+='</div>';
+    h+='<button class="r-add" data-action="add-detail" data-sec="'+sec+'" data-id="'+rEsc(it.id)+'">+ 添加要点</button>';
+    h+='</div>';
+  });
+  h+='<button class="r-add" data-action="add-'+sec+'">+ 添加一条</button>';
+  return h;
+}
+function resumeSched(){if(RESUME_STATE._t)clearTimeout(RESUME_STATE._t);RESUME_STATE._t=setTimeout(function(){resumePreview();},180);}
+function fitResumePreview(ifr){
+  if(!ifr)return;
+  var doc=ifr.contentDocument;if(!doc)return;
+  var host=doc.querySelector('.r-scale'),pg=doc.querySelector('.page');
+  if(!host||!pg)return;
+  var design=pg.offsetWidth||0;
+  if(design<10){setTimeout(function(){fitResumePreview(ifr);},120);return;}
+  var avail=doc.documentElement.clientWidth||design;
+  var s=Math.min(1,avail/design);
+  // scale from top-left so the resume hugs the left edge and no blank gutter appears
+  host.style.transformOrigin='top left';
+  host.style.transform='scale('+s+')';
+  host.style.width=design+'px';
+  host.style.height=pg.offsetHeight+'px';
+  host.style.margin='0';
+}
+function rMToggle(mode){
+  var body=document.querySelector('#r-editor .r-editor-body');if(!body)return;
+  body.classList.toggle('r-show-form',mode==='form');
+  body.classList.toggle('r-show-prev',mode==='prev');
+  var btns=document.querySelectorAll('.r-mtoggle button');
+  for(var i=0;i<btns.length;i++){btns[i].classList.toggle('on',btns[i].getAttribute('data-mode')===mode);}
+  if(mode==='prev'){var ifr=document.getElementById('r-preview');if(ifr)setTimeout(function(){fitResumePreview(ifr);},40);}
+}
+window.rMToggle=rMToggle;
+function resumePreview(){
+  var d=RESUME_STATE.data;if(!d)return;var ifr=document.getElementById('r-preview');if(!ifr)return;
+  ifr.onload=function(){fitResumePreview(ifr);};
+  ifr.srcdoc=buildResumeHTML(d);
+  setTimeout(function(){fitResumePreview(ifr);},120);
+  try{localStorage.setItem(RESUME_LS+d.templateId,JSON.stringify(cleanResumeData(d)));}catch(e){}
+}
+function buildResumeHTML(d){
+  var g=d.globalSettings||{},tc=g.themeColor||'#111',b=d.basic||{},tpl=d.templateId||'classic';
+  var two=TPL_TWO.indexOf(tpl)>-1;
+  var hCenter=b.layout==='center';
+  var rawContacts=[];
+  (b.fieldOrder||[]).forEach(function(f){
+    if(!f.visible||['name','title','employementStatus'].indexOf(f.key)>-1)return;
+    var v=b[f.key];if(!v)return;
+    var ic=(b.icons&&b.icons[f.key])||'';
+    var display=f.key==='birthDate'?v.replace(/-/g,'/'):v;
+    rawContacts.push({key:f.key,html:'<span class="ct">'+(ic?rIcon(ic,tc):'')+'<span>'+rEsc(display)+'</span></span>'});
+  });
+  (b.customFields||[]).forEach(function(cf){if(cf.value)rawContacts.push({key:'custom',html:'<span class="ct">'+(cf.icon?rIcon(cf.icon,tc):'')+'<span>'+rEsc(cf.value)+'</span></span>'});});
+  var contactsAll=rawContacts.filter(function(c){return c.key!=='birthDate';}).map(function(c){return c.html;}).join('');
+  var photo='';
+  if(b.photoConfig&&b.photoConfig.visible){
+    var pc=b.photoConfig||{},pw=pc.width||90,ph=pc.height||120,pbr=(!pc.borderRadius||pc.borderRadius==='none')?'0':(pc.borderRadius||'4px');
+    photo='<div class="photo" style="width:'+pw+'px;height:'+ph+'px;border-radius:'+pbr+'"><img src="'+rEsc(b.photo||'')+'" alt="" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'ph\');this.parentNode.textContent=\''+rEsc((b.name||' ').slice(0,1))+'\'"></div>';
+  }
+  var coreInner='<div class="r-name">'+rEsc(b.name||'姓名')+'</div>'+(b.title?'<div class="r-title">'+rEsc(b.title)+'</div>':'')+(b.employementStatus?'<div class="r-status">'+rEsc(b.employementStatus)+'</div>':'');
+  var birthModern=two&&b.birthDate?'<div class="r-birth">'+rEsc(b.birthDate.replace(/-/g,'/'))+'</div>':'';
+  var info=coreInner+(contactsAll?'<div class="r-contacts">'+contactsAll+'</div>':'');
+  function secHTML(id){
+    if(id==='skills')return rSecHTML({id:'skills',title:'专业技能',icon:'⚡'},d,tc);
+    if(id==='experience')return rSecHTML({id:'experience',title:'工作经验',icon:'💼'},d,tc);
+    if(id==='projects')return rSecHTML({id:'projects',title:'项目经历',icon:'🚀'},d,tc);
+    if(id==='education')return rSecHTML({id:'education',title:'教育经历',icon:'🎓'},d,tc);
+    return '';
+  }
+  var enabled=(d.menuSections||[]).filter(function(ms){return ms.enabled;});
+  var selfEval=(d.selfEvaluationContent||'').trim();
+  function selfSec(){return '<section class="r-sec" data-sec="self"><div class="r-sec-title">✨ 个人评价</div><div class="r-html">'+selfEval+'</div></section>';}
+  var docOpen='<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+(b.name||'简历')+'</title><style>'+RESUME_CSS(tpl,g,tc)+'</style></head><body class="tpl-'+tpl+'">';
+  if(two){
+    var side='';
+    if(photo)side+=photo;
+    side+='<div class="r-side-info"><div class="r-side-core">'+coreInner+birthModern+'</div>'+(contactsAll?'<div class="r-side-contact"><div class="r-contacts">'+contactsAll+'</div></div>':'')+'</div>';
+    enabled.forEach(function(ms){if(ms.id==='education')side+=rSec('education',secHTML('education'));});
+    var main='';
+    enabled.forEach(function(ms){if(['skills','experience','projects'].indexOf(ms.id)>-1)main+=rSec(ms.id,secHTML(ms.id));});
+    if(selfEval)main+=selfSec();
+    return docOpen+'<div class="r-scale"><div class="page"><div class="r-cols"><aside class="r-side">'+side+'</aside><div class="r-main">'+main+'</div></div></div></div></body></html>';
+  }
+  var hStyle=hCenter?'r-head-center':'r-head-left';
+  var header='<header class="r-head '+hStyle+'"><div class="r-head-main">'+photo+'<div class="r-head-tx">'+info+'</div></div></header>';
+  var main='';
+  enabled.forEach(function(ms){if(ms.id==='basic')return;main+=rSec(ms.id,secHTML(ms.id));});
+  if(selfEval)main=selfSec()+main;
+  return docOpen+'<div class="r-scale"><div class="page">'+header+main+'</div></div></body></html>';
+}
+function rSecIco(ms){return ms&&ms.icon?('<span class="r-sec-ic">'+ms.icon+'</span>'):'';}
+function rSec(id,h){return '<section class="r-sec" data-sec="'+rEsc(id)+'">'+h+'</section>';}
+function rSecHTML(ms,d,tc){
+  var id=ms.id;
+  if(id==='skills')return '<div class="r-sec-title">'+rSecIco(ms)+'专业技能</div><div class="r-html">'+(d.skillContent||'')+'</div>';
+  if(id==='experience'){
+    var items=(d.experience||[]).filter(function(x){return x.visible!==false;}).map(function(e){
+      return '<div class="r-item"><div class="r-item-h"><span class="r-item-t">'+rEsc(e.company||'')+(e.position?' · '+rEsc(e.position):'')+'</span><span class="r-item-d">'+rEsc(e.date||'')+'</span></div><div class="r-html">'+(e.details||'')+'</div></div>';
+    }).join('');
+    return '<div class="r-sec-title">'+rSecIco(ms)+'工作经验</div>'+items;
+  }
+  if(id==='projects'){
+    var items=(d.projects||[]).filter(function(x){return x.visible!==false;}).map(function(p){
+      return '<div class="r-item"><div class="r-item-h"><span class="r-item-t">'+rEsc(p.name||'')+(p.role?' · '+rEsc(p.role):'')+'</span><span class="r-item-d">'+rEsc(p.date||'')+'</span></div><div class="r-html">'+(p.description||'')+'</div></div>';
+    }).join('');
+    return '<div class="r-sec-title">'+rSecIco(ms)+'项目经历</div>'+items;
+  }
+  if(id==='education'){
+    var items=(d.education||[]).filter(function(x){return x.visible!==false;}).map(function(e){
+      var head=rEsc(e.school||'')+(e.major?' · '+rEsc(e.major):'')+(e.degree?' · '+rEsc(e.degree):'');
+      var meta=[e.startDate,e.endDate].filter(Boolean).join(' ~ ');
+      return '<div class="r-item"><div class="r-item-h"><span class="r-item-t">'+head+'</span><span class="r-item-d">'+rEsc(meta)+'</span></div>'+(e.gpa?'<div class="r-item-s">GPA：'+rEsc(e.gpa)+'</div>':'')+'<div class="r-html">'+(e.description||'')+'</div></div>';
+    }).join('');
+    return '<div class="r-sec-title">'+rSecIco(ms)+'教育经历</div>'+items;
+  }
+  return '';
+}
+function RESUME_CSS(tpl,g,tc){
+  var two=tpl==='modern';
+  var fs=(g.baseFontSize||15),pad=Math.max(g.pagePadding||0,28),lh=(g.lineHeight||1.5),ss=Math.max((typeof g.sectionSpacing==='number'?g.sectionSpacing:18),6),hs=(g.headerSize||16),shs=(g.subheaderSize||14);
+  var base='*{box-sizing:border-box;margin:0;padding:0}'+
+    'html,body{width:100%;min-height:100%;overflow-x:hidden;}'+
+    '.r-scale{display:block;width:100%;transform-origin:top left}'+
+    'body{background:#fff;color:#222;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:'+fs+'px;line-height:'+lh+';}'+
+    '.page{max-width:820px;min-width:760px;margin:0 auto;padding:'+pad+'px;box-sizing:border-box;background:#fff;}'+
+    '.r-head{margin-bottom:'+ss+'px;}'+
+    '.r-head-main{display:flex;align-items:flex-start;gap:16px;}'+
+    '.r-head-left .r-head-main{justify-content:flex-start;}'+
+    '.r-head-center{text-align:center;}'+
+    '.r-head-center .r-head-main{justify-content:center;flex-direction:column;align-items:center;text-align:center;}'+
+    '.r-head-center .r-contacts{justify-content:center;}'+
+    '.r-head-center .photo{margin-bottom:10px;}'+
+    '.photo{width:90px;height:120px;flex:0 0 auto;background:#ececec;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:40px;font-weight:700;overflow:hidden;}'+
+    '.photo img{width:100%;height:100%;object-fit:cover;}'+
+    '.photo.ph{background:'+tc+'1a;color:'+tc+';}'+
+    '.r-name{font-size:'+(fs*1.4).toFixed(1)+'px;font-weight:800;letter-spacing:.4px;line-height:1.15;word-break:break-word;}'+
+    '.r-title{font-size:'+shs+'px;color:#555;margin-top:3px;}'+
+    '.r-status{display:inline-block;font-size:11px;color:#666;margin-top:6px;padding:1px 9px;border:1px solid #ddd;border-radius:20px;}'+
+    '.r-contacts{display:flex;flex-wrap:wrap;gap:3px 14px;margin-top:9px;font-size:'+(fs*0.78).toFixed(1)+'px;color:#555;}'+
+    '.ct{display:inline-flex;align-items:center;gap:4px;}'+
+    '.ri{width:13px;height:13px;flex:0 0 auto;}'+
+    '.r-cols{display:grid;grid-template-columns:200px 1fr;gap:34px;align-items:start;}'+
+    '.r-side{min-width:0;}'+
+    '.r-side-info{margin-bottom:'+ss+'px;}'+
+    '.r-side .r-sec{margin-bottom:'+ss+'px;}'+
+    '.r-main{min-width:0;}'+
+    '.r-sec{margin-bottom:'+ss+'px;}'+
+    '.r-sec-title{font-size:'+hs+'px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:6px;}'+
+    '.r-sec-ic{font-size:'+(hs*0.95).toFixed(1)+'px;}'+
+    '.r-item{margin-bottom:13px;}'+
+    '.r-item-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}'+
+    '.r-item-t{font-weight:700;font-size:'+(fs*0.95).toFixed(1)+'px;word-break:break-word;}'+
+    '.r-item-s{color:#666;font-size:'+(fs*0.8).toFixed(1)+'px;margin:2px 0;}'+
+    '.r-item-d{color:#999;font-size:'+(fs*0.78).toFixed(1)+'px;white-space:nowrap;flex:0 0 auto;}'+
+    '.r-html{font-size:'+(fs*0.82).toFixed(1)+'px;color:#333;}'+
+    '.r-html ul,.r-html ol{margin-left:18px;}'+
+    '.r-html li{margin:3px 0;}'+
+    '.r-html p{margin:4px 0;}'+
+    tplCSS(tpl,g,tc)+
+    '@media screen and (max-width:760px){.page{padding:22px 16px}.r-cols{grid-template-columns:170px 1fr;gap:18px}}'+
+    '@media screen and (max-width:560px){.r-cols{grid-template-columns:1fr}.r-name{font-size:'+(fs*1.2).toFixed(1)+'px}.r-contacts{font-size:'+(fs*0.72).toFixed(1)+'px}.photo{width:72px;height:90px;font-size:32px}}'+
+    '@media print{body{font-size:11pt}.page{min-width:auto;max-width:none;padding:12mm 14mm}.r-cols{grid-template-columns:200px 1fr}.photo{width:90px;height:120px;font-size:40px}}';
+  return base;
+}
+function tplCSS(tpl,g,tc){
+  var s='';
+  var fs=(g&&g.baseFontSize)||15;
+  if(tpl==='modern'){
+    s+='.tpl-modern .page{width:794px;max-width:794px;min-width:0;padding:0 !important;background:#fff}'+
+      '.tpl-modern .r-cols{grid-template-columns:265px 1fr;gap:0;align-items:stretch;min-height:1123px}'+
+      '.tpl-modern .r-side{background:'+tc+';color:#fff;padding:28px 22px}'+
+      '.tpl-modern .r-side-core{text-align:center;border-bottom:1px solid rgba(255,255,255,.35);padding-bottom:14px;margin-bottom:14px}'+
+      '.tpl-modern .r-side-contact{border-bottom:1px solid rgba(255,255,255,.35);padding-bottom:14px;margin-bottom:14px}'+
+      '.tpl-modern .r-side-info .r-name{color:#fff;font-size:'+(fs*1.7).toFixed(1)+'px;margin-bottom:6px}'+
+      '.tpl-modern .r-side-info .r-title{color:rgba(255,255,255,.85);font-size:'+(fs*0.95).toFixed(1)+'px;margin-bottom:6px}'+
+      '.tpl-modern .r-side-info .r-status{border:none;padding:0;color:rgba(255,255,255,.75);font-size:'+(fs*0.85).toFixed(1)+'px;margin-top:0;margin-bottom:4px}'+
+      '.tpl-modern .r-side-info .r-birth{color:rgba(255,255,255,.75);font-size:'+(fs*0.85).toFixed(1)+'px;margin-bottom:2px}'+
+      '.tpl-modern .r-contacts{color:rgba(255,255,255,.85);font-size:'+(fs*0.85).toFixed(1)+'px;flex-direction:column;gap:10px;margin-top:0}'+
+      '.tpl-modern .r-contacts .ct{gap:8px}'+
+      '.tpl-modern .r-contacts .ri{stroke:#fff;width:14px;height:14px}'+
+      '.tpl-modern .photo{background:transparent;border:2px solid rgba(255,255,255,.35);color:#fff;margin:0 auto 18px}'+
+      '.tpl-modern .photo.ph{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.4)}'+
+      '.tpl-modern .photo img{border-radius:inherit}'+
+      '.tpl-modern .r-side .r-sec-title{color:#fff;border-left:3px solid #fff;padding-left:8px;margin-bottom:10px}'+
+      '.tpl-modern .r-side .r-item{margin-bottom:10px}'+
+      '.tpl-modern .r-side .r-item-h{flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:3px}'+
+      '.tpl-modern .r-side .r-item-t{color:#fff;font-size:'+(fs*0.9).toFixed(1)+'px}'+
+      '.tpl-modern .r-side .r-item-d{color:rgba(255,255,255,.7);font-size:'+(fs*0.78).toFixed(1)+'px}'+
+      '.tpl-modern .r-side .r-html{color:rgba(255,255,255,.85);font-size:'+(fs*0.8).toFixed(1)+'px}'+
+      '.tpl-modern .r-main{background:#fff;padding:28px 18px}'+
+      '.tpl-modern .r-main .r-sec-title{color:'+tc+';border-bottom:2px solid '+tc+';padding-bottom:5px;margin-bottom:10px}'+
+      '@media print{.tpl-modern .page{max-width:none;width:210mm;min-height:297mm}.tpl-modern .r-cols{grid-template-columns:265px 1fr}}';
+  }else if(tpl==='left-right'){
+    s+='.tpl-left-right .r-sec-title{background:'+tc+';color:#fff;padding:7px 12px;border-radius:6px;font-size:14px;display:flex;align-items:center;gap:7px}'+
+      '.tpl-left-right .r-sec-title .r-sec-ic{filter:brightness(2.2)}';
+  }else if(tpl==='classic'){
+    s+='.tpl-classic .r-head{border-bottom:3px double '+tc+';padding-bottom:14px}'+
+      '.tpl-classic .r-contacts{justify-content:center}'+
+      '.tpl-classic .r-sec-title{color:#222;text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-bottom:1px solid #ccc;padding-bottom:5px;font-size:14px}'+
+      '.tpl-classic .r-name{letter-spacing:.1em}';
+  }else if(tpl==='elegant'){
+    s+='.tpl-elegant .r-head-center .photo{border-radius:50%}'+
+      '.tpl-elegant .r-sec-title{color:'+tc+';font-weight:600;display:flex;align-items:center;gap:8px;font-size:15px}'+
+      '.tpl-elegant .r-sec-title::before{content:"";width:16px;height:3px;background:'+tc+';border-radius:2px;flex:0 0 auto}'+
+      '.tpl-elegant .r-item-t{color:#222}';
+  }else if(tpl==='minimalist'){
+    s+='.tpl-minimalist .r-name{font-weight:200;letter-spacing:.14em}'+
+      '.tpl-minimalist .r-title{font-weight:300}'+
+      '.tpl-minimalist .r-sec-title{font-weight:500;text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:#999;border-bottom:1px solid #eee;padding-bottom:7px}'+
+      '.tpl-minimalist .r-item-t{font-weight:500}'+
+      '.tpl-minimalist .r-contacts{color:#777}'+
+      '.tpl-minimalist .r-head-main{gap:14px}';
+  }else if(tpl==='creative'){
+    s+='.tpl-creative .r-sec-title{color:'+tc+';font-weight:700;display:flex;align-items:center;gap:8px}'+
+      '.tpl-creative .r-sec-title .r-sec-ic{background:'+tc+';color:#fff;border-radius:5px;padding:2px 6px;font-size:12px}'+
+      '.tpl-creative .r-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:12px 14px}';
+  }else if(tpl==='timeline'){
+    s+='.tpl-timeline .r-sec-title{color:'+tc+';font-weight:700;font-size:15px}'+
+      '.tpl-timeline .r-item{position:relative;padding-left:22px;margin-bottom:14px}'+
+      '.tpl-timeline .r-item::before{content:"";position:absolute;left:2px;top:6px;width:10px;height:10px;border-radius:50%;background:'+tc+';box-shadow:0 0 0 3px '+tc+'22}'+
+      '.tpl-timeline .r-item::after{content:"";position:absolute;left:6px;top:16px;bottom:-14px;width:2px;background:#e6e6e6}'+
+      '.tpl-timeline .r-item:last-child::after{display:none}';
+  }else if(tpl==='swiss'){
+    s+='.tpl-swiss{font-family:Helvetica,Arial,"PingFang SC","Microsoft YaHei",sans-serif}'+
+      '.tpl-swiss .page{border-top:6px solid '+tc+';padding-top:24px}'+
+      '.tpl-swiss .r-name{text-transform:uppercase;letter-spacing:.03em;font-weight:800;font-size:30px}'+
+      '.tpl-swiss .r-title{text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:#555}'+
+      '.tpl-swiss .r-sec-title{text-transform:uppercase;letter-spacing:.1em;font-weight:700;border-top:2px solid '+tc+';padding-top:7px;font-size:13px}'+
+      '.tpl-swiss .r-item-t{color:'+tc+';font-weight:700}'+
+      '.tpl-swiss .r-contacts{text-transform:uppercase;font-size:11px;letter-spacing:.04em;color:#555}';
+  }else if(tpl==='editorial'){
+    s+='.tpl-editorial{font-family:Georgia,"Times New Roman","Songti SC","SimSun",serif}'+
+      '.tpl-editorial .r-head{border-bottom:2px solid #111;padding-bottom:12px}'+
+      '.tpl-editorial .r-name{font-style:italic;font-weight:700;font-size:34px}'+
+      '.tpl-editorial .r-title{font-style:italic;color:#444}'+
+      '.tpl-editorial .r-sec-title{font-variant:small-caps;letter-spacing:.04em;font-weight:700;border-bottom:1px solid #333;padding-bottom:4px;font-size:15px}'+
+      '.tpl-editorial .r-html{text-align:justify}'+
+      '.tpl-editorial .r-item-d{font-style:italic}'+
+      '.tpl-editorial .r-contacts{font-size:12px;color:#444}';
+  }
+  return s;
+}
+var _h2p=null,_h2pLoading=false,_h2pWait=[];
+var H2P_LOCAL='jl/html2pdf.bundle.min.js';
+var H2P_CDN='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+function loadHtml2pdf(cb){
+  if(_h2p){cb(_h2p);return;}
+  if(_h2pLoading){_h2pWait.push(cb);return;}
+  _h2pLoading=true;
+  function done(lib){_h2pLoading=false;_h2p=lib;_h2pWait.forEach(function(f){f(lib);});_h2pWait=[];}
+  var s=document.createElement('script');
+  s.src=H2P_LOCAL;
+  s.onload=function(){done(window.html2pdf);};
+  s.onerror=function(){
+    var s2=document.createElement('script');
+    s2.src=H2P_CDN;
+    s2.onload=function(){done(window.html2pdf);};
+    s2.onerror=function(){done(null);};
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s);
+}
+function resumeExportPDF(){
+  var d=RESUME_STATE.data,ifr=document.getElementById('r-preview');
+  if(!d||!ifr||!ifr.contentDocument){flash('预览未就绪');return;}
+  // Ensure the preview iframe is visible on mobile before generating PDF
+  var body=document.querySelector('#r-editor .r-editor-body');
+  var wasForm=body&&body.classList.contains('r-show-form');
+  if(wasForm){body.classList.remove('r-show-form');body.classList.add('r-show-prev');fitResumePreview(ifr);}
+  flash('正在生成 PDF…');
+  loadHtml2pdf(function(lib){
+    if(!lib){ try{ifr.contentWindow.print();}catch(e){} flash('当前离线：已切换为浏览器打印，请在打印对话框选择“另存为 PDF”'); return; }
+    var el=ifr.contentDocument.querySelector('.page');
+    if(!el){try{ifr.contentWindow.print();}catch(e){}return;}
+    var name=(d.basic&&d.basic.name)?(d.basic.name+'的简历'):'简历';
+    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
+    function restoreForm(){if(wasForm&&body){body.classList.remove('r-show-prev');body.classList.add('r-show-form');}}
+    try{
+      lib().set(opt).from(el).save().then(function(){flash('PDF 已下载');restoreForm();}).catch(function(err){console.error(err);restoreForm();try{ifr.contentWindow.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
+    }catch(e){ restoreForm(); try{ifr.contentWindow.print();}catch(e2){} flash('PDF 生成失败，已改为打印'); }
+  });
+}
+function downloadBlob(content,fn,type){var blob=new Blob([content],{type:type+';charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){try{URL.revokeObjectURL(a.href);}catch(e){}},1500);}
+function resumeExportJSON(){var d=RESUME_STATE.data;if(!d)return;var x=cleanResumeData(d);downloadBlob(JSON.stringify(x,null,2),(d.basic&&d.basic.name||'resume')+'.json','application/json');}
+function resumeExportHTML(){var d=RESUME_STATE.data;if(!d)return;downloadBlob(buildResumeHTML(d),(d.basic&&d.basic.name||'resume')+'.html','text/html');}
+function resumeReset(){
+  var id=RESUME_STATE.tplId;if(!id)return;
+  try{localStorage.removeItem(RESUME_LS+id);}catch(e){}
+  var T=window.RESUME_TEMPLATES||{};RESUME_STATE.data=JSON.parse(JSON.stringify(T[id]));
+  resumeForm();resumePreview();flash('已重置为模板初始内容');
+}
+function resumeOnInput(e){
+  var el=e.target,bin=el.getAttribute('data-bind');
+  if(el.hasAttribute('data-skill-idx')){
+    var idx=+el.getAttribute('data-skill-idx'),d=RESUME_STATE.data;
+    d._skillArr[idx]=el.value;
+    d.skillContent=listToHtml(d._skillArr);
+    resumeSched();return;
+  }
+  if(el.hasAttribute('data-detail-sec')){
+    var sec=el.getAttribute('data-detail-sec'),id=el.getAttribute('data-detail-id'),idx=+el.getAttribute('data-detail-idx'),d=RESUME_STATE.data;
+    var it=(d[sec]||[]).find(function(x){return String(x.id)===id;});
+    if(it){it._detailsArr[idx]=el.value;it[sec==='experience'?'details':'description']=listToHtml(it._detailsArr);}
+    resumeSched();return;
+  }
+  if(!bin)return;
+  var v=el.type==='checkbox'?(el.checked?true:false):el.value;
+  resumeSet(bin,v);
+}
+function resumeFormClick(e){
+  var btn=e.target.closest('[data-action]');if(!btn)return;
+  var a=btn.getAttribute('data-action'),d=RESUME_STATE.data;if(!d)return;
+  if(a==='add-experience'){d.experience.push(rNewItem('experience'));resumeForm();resumePreview();}
+  else if(a==='add-projects'){d.projects.push(rNewItem('projects'));resumeForm();resumePreview();}
+  else if(a==='add-education'){d.education.push(rNewItem('education'));resumeForm();resumePreview();}
+  else if(a==='add-cf'){if(!d.basic.customFields)d.basic.customFields=[];d.basic.customFields.push({id:'cf'+Date.now(),label:'',value:'',icon:'Globe'});resumeForm();resumePreview();}
+  else if(a==='del'){var sec=btn.getAttribute('data-sec'),id=btn.getAttribute('data-id');if(d[sec])d[sec]=d[sec].filter(function(x){return String(x.id)!==id;});resumeForm();resumePreview();}
+  else if(a==='del-cf'){var cid=btn.getAttribute('data-id');if(d.basic.customFields)d.basic.customFields=d.basic.customFields.filter(function(x){return x.id!==cid;});resumeForm();resumePreview();}
+  else if(a==='add-skill'){d._skillArr.push('');resumeForm();resumePreview();}
+  else if(a==='del-skill'){var sidx=+btn.getAttribute('data-idx');d._skillArr.splice(sidx,1);d.skillContent=listToHtml(d._skillArr);resumeForm();resumePreview();}
+  else if(a==='add-detail'){
+    var sec=btn.getAttribute('data-sec'),id=btn.getAttribute('data-id');
+    var it=(d[sec]||[]).find(function(x){return String(x.id)===id;});
+    if(it){it._detailsArr.push('');it[sec==='experience'?'details':'description']=listToHtml(it._detailsArr);resumeForm();resumePreview();}
+  }
+  else if(a==='del-detail'){
+    var sec=btn.getAttribute('data-sec'),id=btn.getAttribute('data-id'),idx=+btn.getAttribute('data-idx');
+    var it=(d[sec]||[]).find(function(x){return String(x.id)===id;});
+    if(it){it._detailsArr.splice(idx,1);it[sec==='experience'?'details':'description']=listToHtml(it._detailsArr);resumeForm();resumePreview();}
+  }
+}
+function resumeOnChange(e){
+  var el=e.target;
+  if(el.id==='r-photo'&&el.files&&el.files[0]){
+    var f=el.files[0];
+    if(!f.type.match(/^image\//)){flash('请选择图片文件（jpg/png）');return;}
+    if(f.size>4*1024*1024){flash('图片超过 4MB，请压缩后重试');return;}
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      var d=RESUME_STATE.data;if(!d||!d.basic)return;
+      d.basic.photo=ev.target.result;
+      if(d.basic.photoConfig)d.basic.photoConfig.visible=true;
+      resumeForm();resumePreview();flash('头像已上传并显示');
+    };
+    reader.onerror=function(){flash('图片读取失败');};
+    reader.readAsDataURL(f);
+  }
+}
+window.resumePick=resumePick;window.resumeOpen=resumeOpen;window.resumeBack=resumeBack;window.resumeExportPDF=resumeExportPDF;window.resumeExportHTML=resumeExportHTML;window.resumeExportJSON=resumeExportJSON;window.resumeReset=resumeReset;window.resumeOnChange=resumeOnChange;
+
+
 
 /* ====================================================================== */
 /* 面试题库                                                              */
@@ -156,7 +582,7 @@ var IV_BANK=[
   {c:'频率',q:'一次调频的原理、调差率与死区是什么？',a:'电源利用本体调速/下垂特性对频率偏差秒级自动响应：ΔP=-(1/R)·(Δf/fn)·Pn。R 为调差率（如5%），死区 fd（±0.03~0.06Hz）避免频繁动作。一次调频只调偏差比例、不消除稳态偏差，由二次调频接管。测试看响应时间、调差率、死区与超调。'},
   {c:'频率',q:'新能源（光伏/风机）为何需要附加调频能力？',a:'风光无旋转惯量，不能像同步机那样靠转子自然响应频率。需通过限功率预留备用+有功-频率下垂+虚拟惯量+AGC 跟踪来提供调频。难点是资源间歇、预测误差、减载即弃电。'},
   {c:'频率',q:'二次调频（AGC）与一次调频如何分工？',a:'一次调频秒级、就地、调偏差比例；二次调频分钟级、由调度按 ACE=ΔPtie+K·Δf（K=区域频率偏差系数 MW/Hz；%偏置写作 10B·Δf）下发 AGC 指令，消除稳态频率与联络线偏差。二者不抵消：二次动作慢、不干扰一次。'},
-  {c:'频率',q:'虚拟惯量 / VSG 是怎么给系统“加惯量”的？',a:'用控制算法让逆变器模拟同步机转子方程 J·dω/dt=(Pm-Pe)/ω-D(ω-ω0)，惯性支撑功率 P_ine≈−2H·S·(df/dt)/fn（df/dt<0 即频率下降时发出正功率支撑电网）。提供瞬时功率支撑、减缓 df/dt，为一次调频争取时间。H 越大支撑越强，但过载与稳定性需权衡。'},,
+  {c:'频率',q:'虚拟惯量 / VSG 是怎么给系统“加惯量”的？',a:'用控制算法让逆变器模拟同步机转子方程 J·dω/dt=(Pm-Pe)/ω-D(ω-ω0)，惯性支撑功率     P_ine≈−2H·S·(df/dt)/fn（df/dt<0 即频率下降时发出正功率支撑电网）。提供瞬时功率支撑、减缓 df/dt，为一次调频争取时间。H 越大支撑越强，但过载与稳定性需权衡。'},
   {c:'频率',q:'POD（功率振荡阻尼）的原理是什么？储能为何适合做 POD？',a:'在低频振荡（0.1~2.5Hz）模态上注入与振荡同相的功率调制 ΔP=Kd·Δω，提供正阻尼。储能响应 ms 级、可双向、位置灵活，是理想 POD 执行器；常用 WAMS 广域测量选主导模态。'},
   {c:'频率',q:'频率振荡抑制还要关注什么？（SSR/SSO）',a:'除低频振荡外，新能源经串补或弱网易激发次/超同步振荡（SSR/SSO），源于逆变器控制与电网 L/C 交互。措施：PSS、FACTS、储能快速有功、虚拟阻尼。关键在识别振荡源与主导模式、测阻尼比 ζ。'},
   {c:'调度',q:'有功紧急控制（如低频减载 UFLS）如何工作？',a:'事件触发、就地/集中紧急措施防崩溃：UFLS 按频率轮次（如49.0/48.8/48.6Hz）与级差切除负荷；还有高频减载、解列、紧急功率支援。测试看阈值/轮次/级差精度、动作时延(<几百ms)、复位与重合逻辑。'},
@@ -166,7 +592,49 @@ var IV_BANK=[
   {c:'通信',q:'GOOSE 的 StNum/SqNum 起什么作用？',a:'StNum(状态号)变化代表数据变位，SqNum(顺序号)标识同一状态内的重传序号；心跳+TimeAllowedToLive 超时判断链。链路层组播、VLAN 高优先级。测报文周期、St/Sq、丢失检测、网络风暴与断链告警。'},
   {c:'有功无功',q:'无功-电压调节（QU 曲线）的原理？',a:'按并网点电压偏差调无功：Q=-ΔU/k，ΔU=U_real-U_cons。电压偏低发无功升压、偏高吸无功；偏差率>15%通常判越限。测试看斜率 k、电压偏差率告警、调节方向、与 AVC 协调。'},
   {c:'光储',q:'光储优化的目标与策略有哪些？',a:'目标常为经济运行(峰谷价差)+功率平滑(RMSE约束)+SOC约束+寿命。策略：规则控制、模型预测(MPC)、动态规划(DP)。SPPC 站级协调光伏与储能分配。测试看各场景功率分配、SOC 上下限、切换冲击、防逆流与调频贡献。'},
-  {c:'黑启动',q:'黑启动中“构网型(grid-forming)”与“跟网型(grid-following)”区别？',a:'构网型是电压源，可自主建立电压/频率，能做黑启动首启电源；跟网型是电流源，需外部电压才能工作、不能独立黑启动。新能源黑启动靠储能/构网型先建压，光伏作为被启动电源接入。测试看孤网建立、频率/电压稳定、带负荷爬坡、同期并网条件。'}
+  {c:'黑启动',q:'黑启动中“构网型(grid-forming)”与“跟网型(grid-following)”区别？',a:'构网型是电压源，可自主建立电压/频率，能做黑启动首启电源；跟网型是电流源，需外部电压才能工作、不能独立黑启动。新能源黑启动靠储能/构网型先建压，光伏作为被启动电源接入。测试看孤网建立、频率/电压稳定、带负荷爬坡、同期并网条件。'},
+
+  /* ========== 数字能源测试扩展题库 ========== */
+  {c:'数采',q:'储能系统绝缘测试的步骤和注意事项是什么？',a:'步骤：①断开所有负载和电源并放电；②用1000V兆欧表测高压侧/低压侧对地绝缘；③记录绝缘电阻值（正常≥10MΩ，湿热≥2MΩ）。注意：测试前必须放电、接地可靠、环境温度15-30℃、测试后充分放电。绝缘电阻偏低时排查线缆破损、端子受潮、绝缘老化。'},
+  {c:'数采',q:'电池均衡功能验证一般怎么做？',a:'①用高精度万用表记录各单体电压；②在不同荷电态（满充/半充/放空）观察电压分布；③记录均衡前后压差变化；④检查均衡电流是否在BMS规格范围内；⑤确认温度补偿系数正确。判断标准：静态压差一般<30mV，动态<50mV（按厂家规范）。'},
+  {c:'数采',q:'BMS 与 PCS/逆变器通信中断如何快速定位？',a:'①物理层：检查CAN/RS485终端电阻、线缆、屏蔽接地、端口定义；②协议层：抓包确认波特率、帧ID、报文周期、CRC；③应用层：核对协议版本、信号映射、心跳/超时机制；④逐步复位BMS与PCS，观察链路恢复；⑤模拟通信中断验证PCS降功率或停机策略。'},
+  {c:'数采',q:'数采 SOE 与时钟同步测试要点是什么？',a:'SOE（事件顺序记录）测试：①产生已知顺序的遥信变位（如开关分合）；②检查数采上报时标分辨率（通常≤1ms或≤10ms）；③与GPS/BDS/IRIG-B对时源比对；④断链后守时精度测试；⑤多子阵间对时一致性比对。关键：时标准确、顺序不颠倒、缓存不丢。'},
+  {c:'数采',q:'如何验证储能系统并网保护的阈值与时延？',a:'用继电保护测试仪或功率硬件在环注入故障：①过压/欠压保护：阶跃至1.1/0.85倍额定，测动作电压与脱网时间；②过频/欠频保护：49.5/50.5Hz等；③反孤岛：电网断开后2s内脱网；④恢复并网：电压/频率回到允许范围并持续后再并网。记录动作值、返回值、时延。'},
+  {c:'SPPC',q:'SPPC 多子阵功率分配出现偏差的常见原因有哪些？',a:'①各子阵额定容量、SOC、SOH、可用功率不同；②通信延迟或丢包导致指令不同步；③子阵本地控制环（PCS）响应特性差异；④限功率/保护动作使子阵无法跟踪目标；⑤站级策略参数（均衡系数、死区）设置不当。测试方法：注入相同/不同目标功率，对比各子阵实际出力与指令误差。'},
+  {c:'SPPC',q:'站级 SOC 均衡策略测试怎么设计？',a:'①构造各子阵不同SOC初态；②下发充/放电总功率目标；③记录SOC变化曲线与分配功率；④验证是否按SOC高低反向分配（SOC高的少充/多放，SOC低的多充/少放）；⑤校验均衡收敛时间、SOC差阈值、到限保护。关键：不越限、不震荡、收敛可预期。'},
+  {c:'SPPC',q:'SPPC 通信中断 fail-safe 如何验证？',a:'①模拟SPPC与子阵/调度通信中断；②观察SPPC是否按预设策略执行（如保持最后指令、按本地计划运行、逐步降至0功率或停机）；③确认故障恢复后能否平滑接管，不造成功率冲击；④检查告警上报与复位逻辑。边界：短时闪断、长时中断、通道冗余切换。'},
+  {c:'SPPC',q:'防逆流（防倒灌）功能在站级如何测试？',a:'①在并网点加负载/发电，使潮流趋于倒送；②验证SPPC动态下调光伏/储能出力；③测试负荷突变、通信延迟、测量误差场景；④确认无倒送且用户侧供电不受影响；⑤检查防逆流与调度发电计划的优先级、死区、响应时延。'},
+  {c:'SPPC',q:'SPPC 收到调度限功率指令后的响应时延怎么测？',a:'①在调度通道注入带时标的目标功率指令；②用数采/PMU记录全站有功响应曲线；③测90%响应时间、超调量、稳态误差；④模拟指令跳变、斜坡、上下限场景；⑤验证多子阵同步跟踪能力。一般要求秒级响应、稳态误差<2%。'},
+  {c:'光储',q:'光储系统中光伏与储能功率耦合的测试点有哪些？',a:'①并网点功率潮流方向与幅值；②光伏出力波动时储能平滑功率的跟踪精度；③防逆流/限功率下光储协调动作；④储能SOC约束对光伏消纳的影响；⑤并离网切换时光伏限功率与储能建压的配合；⑥谐波、闪变等电能质量。'},
+  {c:'光储',q:'削峰填谷策略在工商业场景如何测试？',a:'①导入分时电价/需量限制曲线；②设置储能充放电计划；③验证峰段放电、谷段充电、需量不越限；④模拟负荷预测偏差、电价突变、设备故障；⑤检查收益计算与SOC约束（峰前充满、谷后不低于下限）。'},
+  {c:'光储',q:'光储电站并网测试的核心要求有哪些？',a:'①电压/频率偏差：电压±10%、频率±0.5Hz内不脱网；②功率因数≥0.95（滞后/超前可调）；③谐波、闪变、三相不平衡符合GB/T 14549/GB/T 12326；④低电压/高电压穿越；⑤防孤岛2s内脱网；⑥保护动作时间、绝缘、漏电流合格。'},
+  {c:'协议',q:'Modbus 功能码 0x03/0x04/0x06/0x10 的区别与应用场景是什么？',a:'0x03读保持寄存器（配置/电量）；0x04读输入寄存器（实时采样，只读）；0x06写单个寄存器（遥控/参数）；0x10写多个寄存器（批量设点/曲线）。测试时核对地址、数量、字节数、异常码0x01/0x02/0x03/0x04的处理。'},
+  {c:'协议',q:'DL/T 645 与 Modbus 在电表/数采场景的差异是什么？',a:'DL/T 645面向多功能电能表，数据标识DI_DI为2字节+2字节，有主从问答与主动上报，常见波特率1200/2400；Modbus通用RTU/TCP，地址+功能码+数据+CRC，更灵活。测试中都要核对数据标识/寄存器映射、波特率、校验、字节序。'},
+  {c:'协议',q:'IEC 61850 建模中 LN、DO、DA 的含义与测试关系？',a:'LN逻辑节点（如MMXU、GGIO、PDIF）代表功能实体；DO数据对象（如TotW、Hz）代表测量/控制量；DA数据属性（如mag.f、q、t）代表值、品质、时标。测试时核对SCD/CID文件，确保数据集、报告控制块、GOOSE/SV映射与点表一致。'},
+  {c:'协议',q:'SCL 文件（SCD/CID/ICD）在测试交接中起什么作用？',a:'ICD是装置能力描述，CID是已配置实例，SCD是全站系统配置。测试中用SCD/CID核对IED名称、IP、数据集、GOOSE订阅、控制块触发选项、报告使能。变更SCL后必须重新下装并做一致性验证。'},
+  {c:'方法论',q:'储能系统调试的基本流程和关键节点有哪些？',a:'流程：准备→设备检查→单体测试→分系统测试→系统联调→性能测试→验收。关键节点：设备型号/安装核对；电池单体电压/内阻；PCS空载/带载；BMS通信；充放电曲线；绝缘/保护；并网切换；效率/响应时间。每步留记录、签字、可追溯。'},
+  {c:'方法论',q:'缺陷闭环管理在控制器测试中的关键动作是什么？',a:'①准确复现并记录现象、环境、版本；②定位根因（软件/配置/硬件/标准理解）；③修复后回归验证，确保不引入新问题；④更新用例库与checklist；⑤评审缺陷趋势，推动设计/流程改进。闭环证据：截图、日志、报文、测试报告。'},
+  {c:'方法论',q:'如何设计一条可复现的站级切换测试用例？',a:'明确前置条件（拓扑、SOC、负载、电网状态）、操作步骤（指令/触发条件）、期望结果（电压/频率/功率曲线、切换时间、冲击电流）、判定标准（阈值、时延）、测试设备（录波仪/功率分析仪/数采）、环境复位步骤。关键：参数化、可重复、独立可调。'},
+  {c:'方法论',q:'新能源测试中回归测试重点关注什么？',a:'①已修复缺陷不再复现；②核心计算逻辑（功率分配、SOC、频率响应）数值一致性；③通信协议版本兼容；④配置参数下装不丢失；⑤多场景组合边界（光储/并离网/通信中断）；⑥新增功能不影响旧功能。'},
+  {c:'行业',q:'储能系统能量效率（Round-Trip Efficiency）如何定义与测试？',a:'定义：一次完整充放电循环中放电能量/充电能量×100%。测试：在额定功率、标准温度下，从SOC下限充到上限再放到下限，用高精度功率分析仪积分P-t。注意扣除辅助用电、温升影响、静置损耗，报告需注明功率、SOC区间、环境温度。'},
+  {c:'行业',q:'工商业储能盈利模式对测试验证提出了哪些要求？',a:'主要模式：峰谷套利、需量管理、动态增容、需求响应、备用电源。测试要求：分时电价策略执行准确；SOC状态满足峰段放电；需量不越限；响应电网调度/DR事件；备用电源切换可靠。需用真实电价/负荷曲线做场景回归。'},
+  {c:'行业',q:'构网型与跟网型逆变器在行业应用中的趋势差异是什么？',a:'跟网型依赖电网电压，成本低、成熟度高，适合强网；构网型可提供电压源特性、惯量支撑、黑启动，适合高比例新能源/弱网/微网。趋势：大型风光基地、孤岛/微网、储能替代同步调相机更多采用构网型，测试重点从并网性能扩展到构网稳定性。'},
+  {c:'频率',q:'一次调频响应时间与调差率测试怎么做？',a:'用频率扰动发生器或仿真注入阶跃频率偏差，录波记录有功响应曲线。测试指标：①响应时间（频率越死区到功率开始变化，一般≤3s）；②调差率R（实测ΔP/Pn / Δf/fn，误差<±10%R）；③超调量；④稳态功率。需测上/下扰双向。'},
+  {c:'频率',q:'AGC 指令跟踪精度与响应时延如何测试？',a:'下发阶跃/斜坡AGC目标值，记录全站有功。指标：①响应时间（目标变化10%到90%响应，一般≤1min）；②调节速率（额定%/min）；③稳态误差（<±2%Pn或按调度要求）；④反向调节死区。需区分一次调频与AGC贡献。'},
+  {c:'调度',q:'远程调度指令的优先级与本地策略冲突怎么测？',a:'构造调度限功率、防逆流、本地计划、SOC保护等多目标冲突场景。验证：①调度指令在通信正常时是否优先；②本地安全保护（过压/过频/逆流）是否能覆盖调度；③冲突时告警与记录；④通信恢复后是否按调度接管。'},
+  {c:'调度',q:'调度计划曲线（日前/日内/实时）下发与执行如何验证？',a:'①按时间轴下发计划曲线；②对比计划值与实测值偏差；③验证曲线插值/断点处理；④模拟曲线更新、撤回、越限裁剪；⑤检查执行率统计与上报。测试中需覆盖整点、半点、分钟级更新。'},
+  {c:'调度',q:'需求响应（DR）事件中储能调度测试要点是什么？',a:'①DR信号接收（平台/调度/Aggregator）；②响应确认与容量锁定；③事件触发后功率调节方向/幅度/持续时间；④事件结束后平滑退出；⑤结算数据（响应时长、实际削减/增加量）准确性。关键：不触发防逆流、SOC留有余量。'},
+  {c:'通信',q:'IEC 60870-5-104 总召唤、遥控选择-执行流程怎么测？',a:'总召唤：链路建立后主站下发总召唤命令，检查终端是否按 ASDU 100/1/8 上送全数据。遥控：①主站下发选择命令（ASDU 45/46）；②终端返校成功后下发执行；③验证动作与SOE；④测试取消、双点、超时未执行、返校失败等异常。'},
+  {c:'通信',q:'通信中断、延迟、丢包如何模拟与验证？',a:'可用网络损伤仪、交换机ACL限速、防火墙、软件代理（如tc/netem）模拟：①断链（拔线/禁端口）看超时重连与fail-safe；②延迟100/500/1000ms看控制稳定性；③丢包1%/5%/10%看数据完整性与重传；④乱序/重复报文看协议容错。'},
+  {c:'通信',q:'冗余通信通道切换测试关注什么？',a:'①主通道故障时备用通道应在秒级接管；②切换过程数据不丢、控制不中断或按fail-safe过渡；③主通道恢复后是否回切及回切策略；④双发双收场景下数据一致性；⑤通道状态告警准确。测试：拔网线、关端口、模拟链路震荡。'},
+  {c:'通信',q:'数采与后台通信链路频繁闪断怎么排查？',a:'①物理层：网线、水晶头、接地、EMC干扰；②网络层：IP冲突、路由抖动、MTU、防火墙会话老化；③应用层：心跳周期过短、并发连接数超限、报文过大；④日志：记录断链/重连时间戳、错误码；⑤逐步隔离定位是网络问题还是协议实现问题。'},
+  {c:'有功无功',q:'功率因数、有功/无功解耦控制测试要点是什么？',a:'设置不同有功出力点，分别给定功率因数、无功目标、电压目标，验证PCS能否独立调节Q而不影响P。指标：功率因数精度（±0.01）、无功响应时间、电压调节稳态误差、过调量。注意有功满发时无功能力受限。'},
+  {c:'有功无功',q:'谐波与电能质量测试关注哪些指标？',a:'①谐波：2~25次电压/电流谐波含有率、THD；②间谐波、直流注入；③电压闪变Pst/Plt；④三相不平衡度；⑤电压偏差与频率偏差。依据GB/T 14549、GB/T 12325、NB/T 32004等。测试工况：满载、半载、不同功率因数、启停。'},
+  {c:'有功无功',q:'AVC/AGC 协调控制测试的关键点是什么？',a:'①AGC（有功）与AVC（无功）指令同时下发时，验证有功/无功独立跟踪且不互相耦合；②站级策略分配至多子阵的功率/无功是否均衡；③限功率时无功优先还是有功优先；④通信异常时本地保持策略；⑤记录响应时间、稳态误差、越限保护动作。'},
+  {c:'有功无功',q:'三相不平衡/对称分量在测试中怎么判断？',a:'用功率分析仪或对称分量法计算正序、负序、零序分量。判断：①三相电压/电流幅值差<2%；②负序不平衡度一般<2%（正常）、<4%（短时）；③零序在接地故障或三相负载严重不对称时增大。测试中应记录A/B/C波形与序分量。'},
+  {c:'黑启动',q:'黑启动试验的前提条件与步骤是什么？',a:'前提：电网全黑、储能/柴油机等具备构网能力、关键负载清单确认、保护定值切换为黑启动模式。步骤：①构网型储能建立电压/频率；②分批接入可控负荷；③逐步启动光伏/风机（跟网型需等压）；④监测系统频率/电压稳定；⑤与主网同期后并网。'},
+  {c:'黑启动',q:'孤网带负荷爬坡测试关注什么？',a:'关注：①负荷突加/突卸时频率/电压最大跌落与恢复时间；②有功-频率下垂特性是否满足设计要求；③储能SOC是否支撑到负荷稳定；④无功补偿/电压调节是否跟上；⑤保护不误动。测试方法：按10%/25%/50%/75%/100%负荷阶梯投切。'},
+  {c:'黑启动',q:'同期并网条件与同期装置测试要点是什么？',a:'同期条件：电压差<5%、频率差<0.1Hz、相角差<10°。测试：用同期表/同期装置记录压差、频差、相角差曲线，验证合闸令在相角差允许窗口内发出；测试手动/自动同期、滑差过大闭锁、电压/频率越限闭锁、非同期合闸保护。'}
 ];
 var IV_CAT='全部';
 function renderIV(){
@@ -174,8 +642,18 @@ function renderIV(){
   document.getElementById('iv-cats').innerHTML=cats.map(function(c){
     return '<div class="tab'+(c===IV_CAT?' on':'')+'" onclick="ivCat(\''+c+'\')">'+c+'</div>';
   }).join('');
-  var list=IV_BANK.filter(function(x){return IV_CAT==='全部'||x.c===IV_CAT;});
-  document.getElementById('iv-list').innerHTML=list.map(function(it,i){
+  var term=(document.getElementById('iv-search')||{value:''}).value.trim().toLowerCase();
+  var list=IV_BANK.filter(function(x){
+    var catOk=IV_CAT==='全部'||x.c===IV_CAT;
+    var termOk=!term || (x.q+' '+x.a).toLowerCase().indexOf(term)>-1;
+    return catOk && termOk;
+  });
+  var box=document.getElementById('iv-list');
+  if(!list.length){
+    box.innerHTML='<div class="rst-empty">未找到匹配题目，换个关键词试试</div>';
+    return;
+  }
+  box.innerHTML=list.map(function(it,i){
     return '<div class="acc-item"><div class="acc-h" onclick="acc(this)"><span class="acc-cat">'+it.c+'</span><span class="acc-t">'+it.q+'</span><span class="acc-ar">▶</span></div>'+
       '<div class="acc-body"><div class="step-c">'+it.a+'</div></div></div>';
   }).join('');
@@ -860,6 +1338,9 @@ CanvasChart.prototype.radar=function(labels,vals,color,prev){var c2d=this.ctx,c=
 /* 图表 resize 总控 */
 var CHART_IDS=['pv','pf','qu','sa','pc','soc','sym','radar'];
 function resizeCharts(){CHART_IDS.forEach(function(id){var c=document.getElementById('c-'+id);if(c&&c._chart){c._chart.resize();if(c._chart._drawFn)c._chart._drawFn();}});}
+/* 简历预览随容器宽度自适应缩放（仅缩放包裹器，不影响 .page，导出 PDF 仍为真实 A4） */
+var _fitRT;
+if(typeof window!=='undefined'){window.addEventListener('resize',function(){clearTimeout(_fitRT);_fitRT=setTimeout(function(){var ifr=document.getElementById('r-preview');if(ifr)fitResumePreview(ifr);},160);});}
 
 /* ====================================================================== */
 /* 设置 / 主题                                                          */
@@ -896,8 +1377,10 @@ function initData(){
   // 站级SOC示例
   [['储能子阵A',500,2000,98,75],['储能子阵B',500,2000,95,60],['储能子阵C',500,2000,97,85],['储能子阵D',500,2000,96,50]].forEach(function(s,i){var tr=document.createElement('tr');
     tr.innerHTML='<td style="color:var(--tx3);font-size:9px;text-align:center">'+(i+1)+'</td><td><input type="text" value="'+s[0]+'"></td><td><input type="number" value="'+s[1]+'" step="1"></td><td><input type="number" value="'+s[2]+'" step="1"></td><td><input type="number" value="'+s[3]+'" step="0.1"></td><td><input type="number" value="'+s[4]+'" step="1"></td><td><button class="btn btn-dng btn-sm" onclick="this.closest(\'tr\').remove();renumSoc()">x</button></td>';document.getElementById('soc-body').appendChild(tr);});
-  // 简历默认经历
-  addResumeRow();
+  // 简历模块：渲染模板网格并绑定表单事件委托
+  try{resumePick();}catch(e){}
+  var _rf=document.getElementById('r-form');
+  if(_rf){_rf.addEventListener('input',resumeOnInput);_rf.addEventListener('click',resumeFormClick);_rf.addEventListener('change',resumeOnChange);}
   // 报告默认一条
   addRpItem();
   // 雷达输入
