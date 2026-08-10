@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -87,8 +87,8 @@ textarea{font-family:var(--mono);resize:vertical}
 .lbl-txt{font-size:10px;color:var(--tx2);font-weight:500;display:flex;align-items:center;gap:3px}
 .lbl-unit{font-size:9px;color:var(--tx3);font-family:var(--mono)}
 .sep{height:1px;background:var(--bd);margin:12px 0}
-.tabbar{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:2px;margin-bottom:12px}
-.tab{flex:1;padding:5px 8px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--tx2);text-align:center}
+.tabbar{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:2px;margin-bottom:12px;width:100%;min-width:0;box-sizing:border-box;position:relative}
+.tab{flex:1 1 auto;padding:5px 8px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--tx2);text-align:center;white-space:nowrap;min-width:max-content}
 .tab:hover{color:var(--acc)}
 .tab.on{background:var(--acc);color:#000}
 .tbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
@@ -134,7 +134,32 @@ textarea{font-family:var(--mono);resize:vertical}
 .pls{animation:pls 2s infinite}
 .full{grid-column:1/-1}
 @media(max-width:900px){.layout{padding:12px}.panel-grid{grid-template-columns:1fr}.sp-cards{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}.frm{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.hamburger{display:flex}.hdr-l>div:not(.hamburger):not(.hdr-logo){display:none}.sidebar-overlay{display:none}.sidebar-overlay.on{display:block}.sidebar{position:fixed;top:0;left:-260px;width:260px;height:100vh;z-index:99;background:var(--bg2);border-right:1px solid var(--bd);padding-top:60px;overflow-y:auto;transition:left .3s ease;max-height:none}.sidebar.on{left:0}.sidebar .nav-card{border:none;border-radius:0;padding:8px}.layout{display:block;padding:12px}.main{flex-direction:column}.panel-grid{grid-template-columns:1fr}.frm{grid-template-columns:1fr}.frm3,.frm4{grid-template-columns:1fr 1fr!important}.hero{padding:20px 16px}.hero-title{font-size:36px}.stat-grid{grid-template-columns:1fr 1fr}.sp-cards{grid-template-columns:1fr 1fr}.siyao-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:1024px){
+  .hamburger{display:flex}
+  .sidebar-overlay{display:none}
+  .sidebar-overlay.on{display:block}
+  .sidebar{position:fixed;top:0;left:-260px;width:260px;height:100vh;z-index:99;background:var(--bg2);border-right:1px solid var(--bd);padding-top:60px;overflow-y:auto;transition:left .3s ease;max-height:none}
+  .sidebar.on{left:0}
+  .sidebar .nav-card{border:none;border-radius:0;padding:8px}
+  .layout{display:block;padding:12px}
+  .main{flex-direction:column;width:100%;min-width:0}
+}
+@media(max-width:768px){
+  .hdr-l>div:not(.hamburger):not(.hdr-logo){display:none}
+  .panel-grid{grid-template-columns:1fr}
+  .frm{grid-template-columns:1fr}
+  .frm3,.frm4{grid-template-columns:1fr 1fr!important}
+  .hero{padding:20px 16px}
+  .hero-title{font-size:36px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .sp-cards{grid-template-columns:1fr 1fr}
+  .siyao-grid{grid-template-columns:1fr 1fr}
+  /* 分类标签栏强制横向滚动 */
+  .tabbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:3px;padding:3px}
+  .tabbar::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;padding:6px 12px;font-size:calc(11px*var(--fs))}
+  .tabbar::after{content:'';position:absolute;right:0;top:0;bottom:0;width:22px;background:linear-gradient(90deg,transparent,var(--bg3));pointer-events:none;opacity:.85}
+}
 @media(max-width:480px){.hero-title{font-size:28px}.stat-grid{grid-template-columns:1fr}.hero{padding:16px 12px}.frm{grid-template-columns:1fr}.frm3,.frm4{grid-template-columns:1fr 1fr!important}.siyao-grid{grid-template-columns:1fr 1fr}.tbl{font-size:10px}}
 /* new: 四遥 / 进制 / 浮点 */
 .siyao-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 12px}
@@ -301,6 +326,103 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
 .intro-foot{position:fixed;left:18px;bottom:14px;z-index:6;font-size:10px;color:#7fa8bd;font-family:var(--mono);letter-spacing:.2em}
 @media(max-width:760px){.it-hi{font-size:52px}.intro-card{width:auto;right:18px;left:18px}.intro-text{left:24px;right:24px}.intro-illust{width:90%;height:50%;top:8%;transform:none;opacity:.85}}
 @media(prefers-reduced-motion:reduce){.boot-cube,.boot-cube::after,.boot-hint,.boot-hint .ring::before,.intro-scroll .mouse span,.intro-sound .dot{animation:none!important}.intro-card,.intro-text,.intro-scroll,.intro-sound{opacity:1!important;transform:none!important}}
+/* ===== 面试题库搜索 & 全站响应式增强 ===== */
+.iv-search{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;color:var(--tx);font-family:var(--sans);font-size:calc(12px*var(--fs));width:100%;margin-bottom:10px}
+.iv-search:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3)}
+/* 折叠面板触控优化 */
+.acc-h{min-height:44px;padding:12px 14px}
+.acc-h .acc-t{line-height:1.55;font-size:calc(12px*var(--fs))}
+.acc-h .acc-cat{font-size:calc(9px*var(--fs))}
+.acc-body{padding:0 14px 14px}
+.step-c{font-size:calc(12px*var(--fs));line-height:1.65}
+/* 表格滚动更顺滑 */
+.tbl-scroll{-webkit-overflow-scrolling:touch}
+/* 窄屏通用收紧 */
+@media(max-width:768px){
+  .chart-wrap{min-height:220px;max-height:280px;padding:6px}
+  .card{padding:12px}
+  .card-title{font-size:calc(12px*var(--fs));padding-bottom:8px;margin-bottom:10px}
+  .rst-item{min-width:90px;padding:7px 10px}
+  .rst-val{font-size:14px}
+  .btn{padding:6px 12px}
+  .sp-cards{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .chart-wrap{min-height:200px;max-height:240px}
+  .tabbar .tab{padding:5px 10px;font-size:calc(10px*var(--fs))}
+  .acc-h{padding:13px 14px}
+  .acc-h .acc-t{font-size:calc(12px*var(--fs))}
+  .frm,.frm3,.frm4{grid-template-columns:1fr!important}
+  .siyao-grid{grid-template-columns:1fr 1fr}
+  .tbl{font-size:calc(10px*var(--fs))}
+  .tbl input,.tbl textarea{font-size:calc(9px*var(--fs));padding:2px 4px}
+  .out-box{font-size:calc(10px*var(--fs));padding:10px}
+}
+/* ===== 简历生成器（模板选择 + 左编辑右预览） ===== */
+.r-hint{font-size:calc(11px*var(--fs));color:var(--tx3);line-height:1.6;margin:4px 0 2px}
+#r-tpl-pick{margin-top:6px}
+.r-tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.r-tpl{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px;cursor:pointer;transition:.18s;overflow:hidden}
+.r-tpl:hover{border-color:var(--acc);background:var(--acc3);transform:translateY(-2px)}
+.r-tpl-prev{height:148px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;text-align:center;overflow:hidden;line-height:1.3;position:relative;background:#fff}
+.r-tpl-pdf{width:100%;height:100%;border:none;display:block;pointer-events:none;object-fit:cover}
+.r-tpl-name{margin-top:9px;font-size:calc(13px*var(--fs));font-weight:700;color:var(--tx)}
+.r-tpl-sub{font-size:calc(10px*var(--fs));color:var(--tx3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#r-editor{margin-top:6px}
+.r-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.r-cur{font-weight:700;color:var(--tx);font-size:calc(13px*var(--fs))}
+.r-spacer{flex:1 1 auto}
+.r-mtoggle{display:none;gap:3px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:3px}
+.r-mtoggle button{border:none;background:transparent;color:var(--tx2);font-size:calc(12px*var(--fs));padding:5px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-family:var(--sans);white-space:nowrap}
+.r-mtoggle button.on{background:var(--acc);color:#000}
+.r-editor-body{display:grid;grid-template-columns:minmax(320px,38%) 1fr;gap:16px;align-items:start}
+.r-form-wrap{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:14px;max-height:74vh;overflow:auto}
+.r-form{display:flex;flex-direction:column;gap:6px}
+.r-fsec{margin-bottom:14px;padding-bottom:6px;border-bottom:1px dashed var(--bd)}
+.r-fsec:last-child{border-bottom:none}
+.r-fsec-t{font-size:calc(13px*var(--fs));font-weight:700;color:var(--acc);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.r-sub{font-size:calc(11px*var(--fs));color:var(--tx3);margin:10px 0 6px;font-weight:600}
+.r-ta{width:100%;background:var(--bg3);color:var(--tx);border:1px solid var(--bd);border-radius:7px;padding:8px 10px;font-size:calc(12px*var(--fs));font-family:var(--mono);line-height:1.5;resize:vertical;box-sizing:border-box;outline:none}
+.r-ta:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3)}
+.r-li{border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--bg3)}
+.r-li-h{display:flex;gap:8px;align-items:center}
+.r-in1,.r-in2,.r-in3{flex:1 1 auto;min-width:0;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:6px 9px;font-size:calc(12px*var(--fs));box-sizing:border-box;outline:none}
+.r-in1:focus,.r-in2:focus,.r-in3:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3)}
+.r-inline{display:flex;gap:8px;margin:8px 0}
+.r-x{flex:0 0 auto;width:26px;height:26px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx3);border-radius:6px;cursor:pointer;font-size:15px;line-height:1}
+.r-x:hover{border-color:#ef4444;color:#ef4444}
+.r-add{margin-top:4px;align-self:flex-start;background:var(--acc3);color:var(--acc);border:1px dashed var(--acc4);border-radius:7px;padding:6px 12px;font-size:calc(11px*var(--fs));cursor:pointer;font-weight:600}
+.r-add:hover{background:var(--acc4)}
+.r-cf{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.r-cf-l{flex:0 0 38%;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:6px 9px;font-size:calc(12px*var(--fs));box-sizing:border-box;outline:none}
+.r-cf-v{flex:1 1 auto;min-width:0;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:6px 9px;font-size:calc(12px*var(--fs));box-sizing:border-box;outline:none}
+.r-cf-l:focus,.r-cf-v:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3)}
+.r-list{display:flex;flex-direction:column;gap:6px}
+.r-row{display:flex;gap:6px;align-items:center}
+.r-row input{flex:1 1 auto;min-width:0;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:6px 9px;font-size:calc(12px*var(--fs));box-sizing:border-box;outline:none}
+.r-row input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3)}
+.r-chk{display:flex;align-items:center;gap:7px;font-size:calc(12px*var(--fs));color:var(--tx2);margin:8px 0;cursor:pointer}
+.r-preview-wrap{background:#fff;border:1px solid var(--bd);border-radius:10px;overflow:auto;min-height:74vh}
+.r-preview{width:100%;height:74vh;border:none;display:block;background:#fff;min-width:100%}
+.r-photo-in{width:100%;margin-top:6px;font-size:calc(11px*var(--fs));color:var(--tx);background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:6px 8px;box-sizing:border-box}
+@media(max-width:900px){
+  .r-editor-body{grid-template-columns:1fr}
+  .r-form-wrap{max-height:none}
+  .r-preview-wrap{min-height:64vh}
+  .r-preview{height:64vh}
+  .r-mtoggle{display:inline-flex}
+  .r-editor-body.r-show-form .r-preview-wrap{display:none}
+  .r-editor-body.r-show-prev .r-form-wrap{display:none}
+  .r-toolbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:6px}
+  .r-toolbar::-webkit-scrollbar{display:none}
+  .r-toolbar .btn{flex:0 0 auto}
+}
+@media(max-width:480px){
+  .r-tpl-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .r-toolbar{padding:8px}
+  .r-form-wrap{padding:10px}
+  .r-cur{display:none}
+}
 </style>
 </head>
 <body class="t0">
@@ -552,40 +674,37 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
     <!-- ============ 简历生成器 ============ -->
     <div class="sect" id="s-resume">
       <div class="card" style="margin-bottom:14px">
-        <div class="card-title"><div class="dot"></div>基本信息</div>
-        <div class="frm">
-          <div class="lbl"><div class="lbl-txt">姓名 / 称呼</div><input type="text" id="r-name" placeholder="如 王工"></div>
-          <div class="lbl"><div class="lbl-txt">目标岗位</div>
-            <select id="r-target">
-              <option value="测试工程师">测试工程师（新能源/储能）</option>
-              <option value="系统集成工程师">系统集成工程师</option>
-              <option value="验证工程师">验证工程师</option>
-              <option value="技术支持工程师">技术支持工程师</option>
-              <option value="测试开发工程师">测试开发工程师</option>
-            </select></div>
-        </div>
-        <div class="sep"></div>
-        <div class="card-title"><div class="dot"></div>工作经历沉淀（填 1~3 条，自动生成 STAR 要点）</div>
-        <div id="r-projects"></div>
-        <button class="btn btn-gho btn-sm" onclick="addResumeRow()">+ 添加一条经历</button>
+        <div class="card-title"><div class="dot"></div>简历生成器 · 选模板 → 编辑 → 预览 → 导出</div>
+        <div class="r-hint">9 套模板，左侧填写即时在右侧预览；内容自动存本机，支持导出 PDF / HTML / JSON。</div>
       </div>
-      <div class="panel-grid">
-        <div class="card">
-          <div class="card-title"><div class="dot"></div>生成内容</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <button class="btn btn-pri" onclick="genResume()">生成简历要点</button>
-            <button class="btn btn-gho" onclick="copyOut('r-out')">复制</button>
-            <button class="btn btn-gho" onclick="downloadTxt('r-out','SparK_简历要点.md')">下载</button>
+
+      <!-- 模板选择 -->
+      <div id="r-tpl-pick">
+        <div class="r-tpl-grid" id="r-tpl-grid"></div>
+      </div>
+
+      <!-- 编辑器 -->
+      <div id="r-editor" style="display:none">
+        <div class="r-toolbar">
+          <button class="btn btn-gho btn-sm" onclick="resumeBack()">← 换模板</button>
+          <span class="r-cur" id="r-cur-tpl"></span>
+          <div class="r-mtoggle" role="group" aria-label="编辑或预览">
+            <button type="button" data-mode="form" class="on" onclick="rMToggle('form')">编辑</button>
+            <button type="button" data-mode="prev" onclick="rMToggle('prev')">预览</button>
           </div>
-          <div class="out-box" id="r-out">填写左侧信息后点击「生成简历要点」。</div>
+          <span class="r-spacer"></span>
+          <button class="btn btn-gho btn-sm" onclick="resumeExportPDF()">导出 PDF</button>
+          <button class="btn btn-gho btn-sm" onclick="resumeExportHTML()">导出 HTML</button>
+          <button class="btn btn-gho btn-sm" onclick="resumeExportJSON()">导出 JSON</button>
+          <button class="btn btn-gho btn-sm" onclick="resumeReset()">重置</button>
         </div>
-        <div class="card">
-          <div class="card-title"><div class="dot"></div>自我介绍话术</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <button class="btn btn-pri" onclick="genIntro()">生成自我介绍</button>
-            <button class="btn btn-gho" onclick="copyOut('r-intro')">复制</button>
+        <div class="r-editor-body">
+          <div class="r-form-wrap">
+            <div class="r-form" id="r-form"></div>
           </div>
-          <div class="out-box" id="r-intro">点击「生成自我介绍」生成 30 秒面试开场话术。</div>
+          <div class="r-preview-wrap">
+            <iframe id="r-preview" class="r-preview" title="简历实时预览"></iframe>
+          </div>
         </div>
       </div>
     </div>
@@ -594,6 +713,7 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
     <div class="sect" id="s-interview">
       <div class="card">
         <div class="card-title"><div class="dot"></div>高频面试题库（点击展开答案）</div>
+        <input type="text" id="iv-search" class="iv-search" placeholder="搜索题目或答案关键词…" oninput="renderIV()">
         <div class="tabbar" id="iv-cats" style="margin-bottom:14px"></div>
         <div id="iv-list"></div>
         <div class="hint">题库覆盖：数采(子阵级)、SPPC(站级)、光储场景、通信协议、测试方法论、行业认知。结合你的实际项目准备 STAR 回答效果最佳。</div>
@@ -1130,6 +1250,7 @@ Model 101/103 单相/三相逆变器
 </div><!-- /layout -->
 
 <script src="three.min.js"></script>
+<script src="jl/templates.js"></script>
 <script src="app.js"></script>
 <script>
 /* 启动页 + 自我介绍页切换 */
