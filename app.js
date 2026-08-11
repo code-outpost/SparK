@@ -146,10 +146,13 @@ function resumeBack(){
 }
 function resumeForm(){
   var d=RESUME_STATE.data;if(!d)return;var box=document.getElementById('r-form');if(!box)return;
-  d._skillArr=htmlToList(d.skillContent||'');
-  (d.experience||[]).forEach(function(it){it._detailsArr=htmlToList(it.details||'');});
-  (d.projects||[]).forEach(function(it){it._detailsArr=htmlToList(it.description||'');});
-  (d.education||[]).forEach(function(it){it._detailsArr=htmlToList(it.description||'');});
+  // Preserve in-progress editing arrays; only (re)build them from the stored
+  // HTML when they don't yet exist. Rebuilding on every call used to strip the
+  // empty row that "添加技能 / 添加要点" just appended (htmlToList filters blanks).
+  if(!d._skillArr)d._skillArr=htmlToList(d.skillContent||'');
+  (d.experience||[]).forEach(function(it){if(!it._detailsArr)it._detailsArr=htmlToList(it.details||'');});
+  (d.projects||[]).forEach(function(it){if(!it._detailsArr)it._detailsArr=htmlToList(it.description||'');});
+  (d.education||[]).forEach(function(it){if(!it._detailsArr)it._detailsArr=htmlToList(it.description||'');});
   var html='';
   (d.menuSections||[]).forEach(function(ms){
     if(!ms.enabled)return;
@@ -233,6 +236,9 @@ function fitResumePreview(ifr){
   host.style.width=design+'px';
   host.style.height=pg.offsetHeight+'px';
   host.style.margin='0';
+  // let the parent CSS control the iframe height; clear any inline sizing from previous versions
+  ifr.style.height='';
+  ifr.style.minHeight='';
 }
 function rMToggle(mode){
   var body=document.querySelector('#r-editor .r-editor-body');if(!body)return;
@@ -331,9 +337,9 @@ function RESUME_CSS(tpl,g,tc){
   var two=tpl==='modern';
   var fs=(g.baseFontSize||15),pad=Math.max(g.pagePadding||0,28),lh=(g.lineHeight||1.5),ss=Math.max((typeof g.sectionSpacing==='number'?g.sectionSpacing:18),6),hs=(g.headerSize||16),shs=(g.subheaderSize||14);
   var base='*{box-sizing:border-box;margin:0;padding:0}'+
-    'html,body{width:100%;min-height:100%;overflow-x:hidden;}'+
+    'html,body{width:100%;min-height:100%;overflow-x:hidden;background:#fff;}'+
     '.r-scale{display:block;width:100%;transform-origin:top left}'+
-    'body{background:#fff;color:#222;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:'+fs+'px;line-height:'+lh+';}'+
+    'body{color:#222;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:'+fs+'px;line-height:'+lh+';}'+
     '.page{max-width:820px;min-width:760px;margin:0 auto;padding:'+pad+'px;box-sizing:border-box;background:#fff;}'+
     '.r-head{margin-bottom:'+ss+'px;}'+
     '.r-head-main{display:flex;align-items:flex-start;gap:16px;}'+
@@ -371,6 +377,7 @@ function RESUME_CSS(tpl,g,tc){
     tplCSS(tpl,g,tc)+
     '@media screen and (max-width:760px){.page{padding:22px 16px}.r-cols{grid-template-columns:170px 1fr;gap:18px}}'+
     '@media screen and (max-width:560px){.r-cols{grid-template-columns:1fr}.r-name{font-size:'+(fs*1.2).toFixed(1)+'px}.r-contacts{font-size:'+(fs*0.72).toFixed(1)+'px}.photo{width:72px;height:90px;font-size:32px}}'+
+    '@media screen and (max-width:900px){.page{box-shadow:0 4px 18px rgba(0,0,0,.15)}}'+
     '@media print{body{font-size:11pt}.page{min-width:auto;max-width:none;padding:12mm 14mm}.r-cols{grid-template-columns:200px 1fr}.photo{width:90px;height:120px;font-size:40px}}';
   return base;
 }
@@ -473,23 +480,31 @@ function loadHtml2pdf(cb){
   document.head.appendChild(s);
 }
 function resumeExportPDF(){
-  var d=RESUME_STATE.data,ifr=document.getElementById('r-preview');
-  if(!d||!ifr||!ifr.contentDocument){flash('预览未就绪');return;}
-  // Ensure the preview iframe is visible on mobile before generating PDF
-  var body=document.querySelector('#r-editor .r-editor-body');
-  var wasForm=body&&body.classList.contains('r-show-form');
-  if(wasForm){body.classList.remove('r-show-form');body.classList.add('r-show-prev');fitResumePreview(ifr);}
+  var d=RESUME_STATE.data;
+  if(!d){flash('没有可导出的简历数据');return;}
   flash('正在生成 PDF…');
   loadHtml2pdf(function(lib){
-    if(!lib){ try{ifr.contentWindow.print();}catch(e){} flash('当前离线：已切换为浏览器打印，请在打印对话框选择“另存为 PDF”'); return; }
-    var el=ifr.contentDocument.querySelector('.page');
-    if(!el){try{ifr.contentWindow.print();}catch(e){}return;}
+    if(!lib){flash('PDF 库加载失败，已切换为浏览器打印'); try{window.print();}catch(e){} return;}
     var name=(d.basic&&d.basic.name)?(d.basic.name+'的简历'):'简历';
-    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
-    function restoreForm(){if(wasForm&&body){body.classList.remove('r-show-prev');body.classList.add('r-show-form');}}
+    var html=buildResumeHTML(d);
+    var wrap=document.createElement('div');
+    wrap.innerHTML=html;
+    var page=wrap.querySelector('.page');
+    if(!page){flash('页面元素未找到');return;}
+    // Render off-screen in the parent document so html2pdf always has a stable DOM,
+    // regardless of whether the mobile preview iframe is currently visible.
+    wrap.style.position='fixed';
+    wrap.style.left='-9999px';
+    wrap.style.top='0';
+    wrap.style.width='794px';
+    wrap.style.zIndex='-1';
+    wrap.style.pointerEvents='none';
+    document.body.appendChild(wrap);
+    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
+    function cleanup(){if(wrap.parentNode)wrap.parentNode.removeChild(wrap);}
     try{
-      lib().set(opt).from(el).save().then(function(){flash('PDF 已下载');restoreForm();}).catch(function(err){console.error(err);restoreForm();try{ifr.contentWindow.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
-    }catch(e){ restoreForm(); try{ifr.contentWindow.print();}catch(e2){} flash('PDF 生成失败，已改为打印'); }
+      lib().set(opt).from(page).save().then(function(){flash('PDF 已下载');cleanup();}).catch(function(err){console.error(err);cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
+    }catch(e){cleanup(); try{window.print();}catch(e2){} flash('PDF 生成失败，已改为打印');}
   });
 }
 function downloadBlob(content,fn,type){var blob=new Blob([content],{type:type+';charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){try{URL.revokeObjectURL(a.href);}catch(e){}},1500);}
@@ -528,7 +543,7 @@ function resumeFormClick(e){
   else if(a==='add-cf'){if(!d.basic.customFields)d.basic.customFields=[];d.basic.customFields.push({id:'cf'+Date.now(),label:'',value:'',icon:'Globe'});resumeForm();resumePreview();}
   else if(a==='del'){var sec=btn.getAttribute('data-sec'),id=btn.getAttribute('data-id');if(d[sec])d[sec]=d[sec].filter(function(x){return String(x.id)!==id;});resumeForm();resumePreview();}
   else if(a==='del-cf'){var cid=btn.getAttribute('data-id');if(d.basic.customFields)d.basic.customFields=d.basic.customFields.filter(function(x){return x.id!==cid;});resumeForm();resumePreview();}
-  else if(a==='add-skill'){d._skillArr.push('');resumeForm();resumePreview();}
+  else if(a==='add-skill'){d._skillArr.push('');d.skillContent=listToHtml(d._skillArr);resumeForm();resumePreview();}
   else if(a==='del-skill'){var sidx=+btn.getAttribute('data-idx');d._skillArr.splice(sidx,1);d.skillContent=listToHtml(d._skillArr);resumeForm();resumePreview();}
   else if(a==='add-detail'){
     var sec=btn.getAttribute('data-sec'),id=btn.getAttribute('data-id');
