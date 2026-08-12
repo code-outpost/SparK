@@ -92,7 +92,7 @@ textarea{font-family:var(--mono);resize:vertical}
 .lbl-txt{font-size:10px;color:var(--tx2);font-weight:500;display:flex;align-items:center;gap:3px}
 .lbl-unit{font-size:9px;color:var(--tx3);font-family:var(--mono)}
 .sep{height:1px;background:var(--bd);margin:12px 0}
-.tabbar{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:2px;margin-bottom:12px;width:100%;min-width:0;box-sizing:border-box;position:relative}
+.tabbar{display:flex;flex-wrap:wrap;gap:4px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:3px;margin-bottom:12px;width:100%;min-width:0;box-sizing:border-box;position:relative}
 .tab{flex:1 1 auto;padding:5px 8px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--tx2);text-align:center;white-space:nowrap;min-width:max-content}
 .tab:hover{color:var(--acc)}
 .tab.on{background:var(--acc);color:#000}
@@ -346,6 +346,29 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
 /* ===== 面试题库搜索 & 全站响应式增强 ===== */
 .iv-search{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;color:var(--tx);font-family:var(--sans);font-size:calc(12px*var(--fs));width:100%;margin-bottom:10px}
 .iv-search:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3)}
+/* ===== 新能源岗位 JD 库 ===== */
+.jd-dom{margin-left:8px;font-size:calc(9px*var(--fs));font-weight:700;color:var(--acc);background:var(--acc3);padding:2px 7px;border-radius:20px;white-space:nowrap}
+.jd-check{display:inline-flex;align-items:center;gap:6px;margin-right:8px;cursor:pointer}
+.jd-check input{width:16px;height:16px;accent-color:var(--acc);cursor:pointer}
+.jd-req{font-size:calc(12px*var(--fs));line-height:1.7;color:var(--tx2);margin:4px 0 12px}
+.jd-req li{margin:2px 0 2px 16px;list-style:disc}
+.jd-tags{display:flex;flex-direction:column;gap:8px}
+.jd-taggrp{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.jd-taglabel{flex:0 0 auto;width:64px;font-size:calc(10px*var(--fs));font-weight:700;color:var(--tx3);text-align:right;padding-right:4px}
+.jd-chip{font-size:calc(11px*var(--fs));padding:3px 9px;border-radius:6px;background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
+.jd-chip.common{background:var(--acc);color:#fff;border-color:var(--acc)}
+.jd-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:10px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;flex-wrap:wrap}
+.jd-bar-info{font-size:calc(12px*var(--fs));font-weight:600;color:var(--acc)}
+.jd-bar-actions{display:flex;gap:8px}
+.jd-an-grp{margin:10px 0}
+.jd-an-grp .jd-taglabel{width:72px}
+.jd-an-bar{display:flex;align-items:center;gap:8px;margin:3px 0}
+.jd-an-name{flex:0 0 150px;font-size:calc(11px*var(--fs));color:var(--tx2);text-align:right;padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jd-an-track{flex:1;height:14px;background:var(--bg3);border-radius:8px;overflow:hidden}
+.jd-an-fill{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:calc(9px*var(--fs));color:#fff;font-weight:700;min-width:22px}
+.jd-an-common{font-size:calc(9px*var(--fs));font-weight:700;color:#fff;background:var(--acc);border-radius:20px;padding:1px 6px;margin-left:6px}
+.jd-an-sum{font-size:calc(12px*var(--fs));line-height:1.7;color:var(--tx);background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.jd-an-sum b{color:var(--acc)}
 /* 折叠面板触控优化 */
 .acc-h{min-height:44px;padding:12px 14px}
 .acc-h .acc-t{line-height:1.55;font-size:calc(12px*var(--fs))}
@@ -482,12 +505,12 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
   <div class="intro-logo"><span class="cube">⚡</span><span>SparK</span></div>
   <div class="intro-text">
     <div class="it-hi"><b>SparK</b><b class="hi-accent">数字能源测试工具箱</b></div>
-    <p class="it-sub">一站式离线测试效率工具。光伏储能并网计算、一次调频 / AGC / QU 曲线验证、Modbus / IEC 104 协议速查、SPPC / 数采场景模板、面试题库与能力雷达——零网络依赖，开箱即用。</p>
+    <p class="it-sub">一站式离线测试效率工具。光伏储能并网计算、一次调频 / AGC / QU 曲线验证、Modbus / IEC 104 协议速查、SPPC / 数采场景模板、新能源岗位 JD 库与能力雷达——零网络依赖，开箱即用。</p>
     <button class="it-cta" id="introCta">开始探索 ↓</button>
   </div>
   <div class="intro-card">
     <div class="ic-title">你好，欢迎来访 ⚡</div>
-    <div class="ic-sub">这里收录了我在数字能源测试中提炼的计算公式、协议速查、场景模板与面试题库。滚动或点击“开始探索”即可进入工作台。</div>
+    <div class="ic-sub">这里收录了我在数字能源测试中提炼的计算公式、协议速查、场景模板与新能源岗位 JD 库。滚动或点击“开始探索”即可进入工作台。</div>
     <div class="ic-btns">
       <a class="ic-btn primary" href="javascript:void(0)" onclick="gotoApp&&gotoApp()">进入工作台 →</a>
       <a class="ic-btn" href="mailto:2931424924@qq.com">联系我 ✉</a>
@@ -541,8 +564,8 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
       <nav>
         <div class="nav-item" data-sect="resume" onclick="nav(this,'resume')">
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M5 7h6M5 10h6M5 4h3" stroke-linecap="round"/></svg>简历生成器</div>
-        <div class="nav-item" data-sect="interview" onclick="nav(this,'interview')">
-          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 3-5 6-5s6 2 6 5" stroke-linecap="round"/></svg>面试题库</div>
+        <div class="nav-item" data-sect="jd" onclick="nav(this,'jd')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3" width="11" height="10" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h3.5" stroke-linecap="round"/></svg>岗位JD库</div>
         <div class="nav-item" data-sect="radar" onclick="nav(this,'radar')">
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l5 4-2 8H5L3 6z"/><path d="M8 2v12M3 6h10" stroke-linecap="round"/></svg>能力雷达图</div>
       </nav>
@@ -611,10 +634,10 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
         <div class="hero-inner">
           <div class="hero-badge rise" style="--d:.05s">数字能源 · 测试效率 · 求职加速器</div>
           <h1 class="hero-title rise" style="--d:.18s">SparK</h1>
-          <p class="hero-sub rise" style="--d:.32s">数字能源 · 数采（子阵级）/ SPPC（站级）测试工程师的一体化离线工具箱。计算内核、协议速查、场景模板、原理知识库、简历与面试题库——随手即查，零网络依赖。</p>
+          <p class="hero-sub rise" style="--d:.32s">数字能源 · 数采（子阵级）/ SPPC（站级）测试工程师的一体化离线工具箱。计算内核、协议速查、场景模板、原理知识库、简历与新能源岗位 JD 库——随手即查，零网络依赖。</p>
           <div class="stat-grid rise" style="--d:.46s">
             <div class="stat-card"><div class="stat-num">23</div><div class="stat-lbl">知识条目</div></div>
-            <div class="stat-card"><div class="stat-num">27</div><div class="stat-lbl">面试题库</div></div>
+            <div class="stat-card"><div class="stat-num">78</div><div class="stat-lbl">岗位JD</div></div>
             <div class="stat-card"><div class="stat-num">11</div><div class="stat-lbl">计算模块</div></div>
             <div class="stat-card"><div class="stat-num">∞</div><div class="stat-lbl">离线即用</div></div>
           </div>
@@ -624,7 +647,7 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
             <div class="chip" onclick="nav(this,'comm')">通信速查</div>
             <div class="chip" onclick="nav(this,'scenario')">测试场景</div>
             <div class="chip" onclick="nav(this,'knowledge')">知识库</div>
-            <div class="chip" onclick="nav(this,'interview')">面试题库</div>
+            <div class="chip" onclick="nav(this,'jd')">岗位JD库</div>
             <div class="chip" onclick="nav(this,'resume')">简历生成</div>
             <div class="chip" onclick="nav(this,'lab')">公式速算</div>
           </div>
@@ -734,14 +757,25 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
       </div>
     </div>
 
-    <!-- ============ 面试题库 ============ -->
-    <div class="sect" id="s-interview">
+    <!-- ============ 新能源岗位 JD 库 ============ -->
+    <div class="sect" id="s-jd">
       <div class="card">
-        <div class="card-title"><div class="dot"></div>高频面试题库（点击展开答案）</div>
-        <input type="text" id="iv-search" class="iv-search" placeholder="搜索题目或答案关键词…" oninput="renderIV()">
-        <div class="tabbar" id="iv-cats" style="margin-bottom:14px"></div>
-        <div id="iv-list"></div>
-        <div class="hint">题库覆盖：数采(子阵级)、SPPC(站级)、光储场景、通信协议、测试方法论、行业认知。结合你的实际项目准备 STAR 回答效果最佳。</div>
+        <div class="card-title"><div class="dot"></div>新能源岗位 JD 库 · 能力提炼</div>
+        <div class="hint">内置代表性新能源企业真实岗位 JD（来源：公开招聘信息），自动提取「需要会什么」。勾选多个岗位 → 底部「生成能力图谱」可对比<b>共性能力</b>。全部离线，零网络依赖。</div>
+        <input type="text" id="jd-search" class="iv-search" placeholder="搜索公司 / 岗位 / 关键词（如 充电桩、CAN、BMS）…" oninput="renderJD()">
+        <div class="tabbar" id="jd-cats" style="margin-bottom:14px"></div>
+        <div id="jd-list"></div>
+        <div class="jd-bar" id="jd-bar">
+          <span class="jd-bar-info" id="jd-bar-info">已选 0 个岗位</span>
+          <span class="jd-bar-actions">
+            <button class="btn btn-pri btn-sm" onclick="jdAnalyze()">生成能力图谱</button>
+            <button class="btn btn-gho btn-sm" onclick="jdClearSel()">清空选择</button>
+          </span>
+        </div>
+      </div>
+      <div class="card" id="jd-analysis" style="display:none">
+        <div class="card-title"><div class="dot"></div>能力提炼 · 所选岗位共性要求</div>
+        <div id="jd-analysis-body"></div>
       </div>
     </div>
 
@@ -1252,7 +1286,7 @@ Model 101/103 单相/三相逆变器
           <div class="about-d" style="margin-top:6px">SparK · 数字能源测试效率工具箱 v1.0<br><br>面向数字能源控制器测试工程师的本地工具箱：求职加速器 + 测试效率计算 + 场景库 + 报告/知识。全部计算在浏览器本地完成，数据不出本机。</div>
           <div class="sep"></div>
           <div class="card-title"><div class="dot"></div>模块清单</div>
-          <div class="about-d" style="margin-top:6px">求职：简历生成 / 面试题库 / 能力雷达<br>计算：光伏 / 一次调频 / QU / 储能分配 / 功率 / 站级SOC / 对称分量 / 四遥 / 进制 / 浮点 / 通信速查<br>场景：SPPC·数采测试场景库<br>报告/知识：报告模板 / 协议·方法论知识库</div>
+          <div class="about-d" style="margin-top:6px">求职：简历生成 / 岗位JD库（能力提炼）/ 能力雷达<br>计算：光伏 / 一次调频 / QU / 储能分配 / 功率 / 站级SOC / 对称分量 / 四遥 / 进制 / 浮点 / 通信速查<br>场景：SPPC·数采测试场景库<br>报告/知识：报告模板 / 协议·方法论知识库</div>
         </div>
       </div>
     </div>
@@ -1264,7 +1298,7 @@ Model 101/103 单相/三相逆变器
         <div class="about-d">SparK 是面向<b>光伏/储能/光储测试</b>的本地效率工具箱，覆盖<b>求职准备</b>与<b>日常测试计算</b>两条主线。所有功能离线运行，数据仅存于本地浏览器。</div>
       </div>
       <div class="about-list">
-        <div class="about-item"><div class="about-badge">求</div><div class="about-body"><div class="about-t">求职加速器</div><div class="about-d">简历/自我介绍生成器（STAR 化）、面试题库、能力雷达图，帮你系统梳理经历、快速备战面试。</div></div></div>
+        <div class="about-item"><div class="about-badge">求</div><div class="about-body"><div class="about-t">求职加速器</div><div class="about-d">简历/自我介绍生成器（STAR 化）、新能源岗位 JD 库（自动提炼所需协议/软件/能力）、能力雷达图，帮你系统梳理经历、精准备战面试。</div></div></div>
         <div class="about-item"><div class="about-badge">算</div><div class="about-body"><div class="about-t">测试效率计算</div><div class="about-d">光伏组串/容量、一次调频、QU、储能分配、功率、站级SOC、对称分量、四遥点位、进制/浮点、通信速查——直接复用电力系统计算器验证内核。</div></div></div>
         <div class="about-item"><div class="about-badge">景</div><div class="about-body"><div class="about-t">测试场景库</div><div class="about-d">SPPC 站级与数采(子阵级) 预设场景：纯光/纯储/光储/工商业，含前置条件→步骤→预期→记录表，一键导出。</div></div></div>
         <div class="about-item"><div class="about-badge">知</div><div class="about-body"><div class="about-t">报告与知识</div><div class="about-d">测试报告模板自动生成；协议（IEC 61850 / Modbus / SunSpec）与测试方法论（等价类/边界值/错误推测/探索性）速查卡片。</div></div></div>
