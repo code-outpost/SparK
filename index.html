@@ -82,6 +82,7 @@ textarea{font-family:var(--mono);resize:vertical}
 .sect{display:none;min-width:0;width:100%}
 .sect.on{display:block}
 .panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:0}
+.soc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:0}
 .card{background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px;min-width:0;word-break:break-word}
 .card-title{font-size:11px;font-weight:600;color:var(--tx);margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:7px}
 .card-title .dot{width:5px;height:5px;border-radius:50%;background:var(--acc);box-shadow:0 0 6px var(--acc);flex-shrink:0}
@@ -104,6 +105,9 @@ textarea{font-family:var(--mono);resize:vertical}
 .tbl input{font-size:10px;padding:3px 5px;min-width:0}
 .tbl textarea{font-size:10px;padding:3px 5px;min-width:0}
 .tbl-scroll{overflow-x:auto;max-height:300px;overflow-y:auto}
+.tbl-scroll>.tbl{width:max-content;min-width:100%;table-layout:auto}
+.tbl-scroll>.tbl td{white-space:nowrap}
+.tbl-scroll>.tbl input,.tbl-scroll>.tbl textarea{width:100%;box-sizing:border-box;min-width:56px}
 .btn{padding:7px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;border:1px solid;font-family:var(--sans);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .btn-pri{background:var(--acc);border-color:var(--acc);color:#000}
 .btn-pri:hover{background:var(--acc2);box-shadow:0 0 16px rgba(255,140,66,.3)}
@@ -138,7 +142,7 @@ textarea{font-family:var(--mono);resize:vertical}
 @keyframes pls{0%,100%{opacity:1}50%{opacity:.4}}
 .pls{animation:pls 2s infinite}
 .full{grid-column:1/-1}
-@media(max-width:900px){.layout{padding:12px}.panel-grid{grid-template-columns:1fr}.sp-cards{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}.frm{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.layout{padding:12px}.panel-grid{grid-template-columns:1fr}.soc-grid{grid-template-columns:1fr}.sp-cards{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}.frm{grid-template-columns:1fr 1fr}}
 @media(max-width:1024px){
   .hamburger{display:flex}
   .sidebar-overlay{display:none}
@@ -396,6 +400,7 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
   .siyao-grid{grid-template-columns:1fr 1fr}
   .tbl{font-size:calc(10px*var(--fs))}
   .tbl input,.tbl textarea{font-size:calc(9px*var(--fs));padding:2px 4px}
+  .tbl-scroll>.tbl input,.tbl-scroll>.tbl textarea{min-width:48px}
   .out-box{font-size:calc(10px*var(--fs));padding:10px}
 }
 /* ===== 简历生成器（模板选择 + 左编辑右预览） ===== */
@@ -1023,7 +1028,7 @@ Q = S × √(1 - PF²)</div>
     <div class="sect" id="s-soc">
       <div class="card">
         <div class="card-title"><div class="dot"></div>站级SOC分析</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:0">
+          <div class="soc-grid">
           <div>
             <div class="card-title" style="font-size:10px"><div class="dot" style="width:4px;height:4px;"></div>子阵列表<button class="btn btn-gho btn-sm" style="margin-left:auto" onclick="addSocRow()">+ 添加</button></div>
             <div class="tbl-scroll" style="max-height:320px"><table class="tbl"><thead><tr><th style="width:24px">#</th><th>名称</th><th>额定kW</th><th>容量kWh</th><th>SOH%</th><th>SOC%</th><th style="width:32px"></th></tr></thead><tbody id="soc-body"></tbody></table></div>
