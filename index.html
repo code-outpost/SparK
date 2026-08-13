@@ -203,6 +203,14 @@ textarea{font-family:var(--mono);resize:vertical}
 .bits .s{color:#E879F9}.bits .e{color:#10B981}.bits .m{color:#38BDF8}
 .err{color:var(--err);font-size:12px;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px}
 .hint{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.6}
+/* THD 谐波条形 */
+.thd-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.thd-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.thd-ord{width:34px;color:var(--tx3);font-family:var(--mono)}
+.thd-val{width:78px;color:var(--tx);font-family:var(--mono)}
+.thd-bar{flex:1;height:8px;background:var(--bg);border-radius:6px;overflow:hidden;border:1px solid var(--bd)}
+.thd-bar-f{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:6px}
+.thd-pct{width:54px;text-align:right;color:var(--acc2);font-family:var(--mono)}
 @media(max-width:760px){.siyao-grid{grid-template-columns:1fr 1fr}}
 /* 设置 */
 .set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--bd)}
@@ -597,12 +605,20 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12Q5 12 8 6Q11 0 14 0Q15 0 16 2" stroke-linecap="round"/></svg>QU曲线</div>
         <div class="nav-item" data-sect="sa" onclick="nav(this,'sa')">
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="5" width="3" height="9" rx="1"/><rect x="6" y="2" width="3" height="12" rx="1"/><rect x="11" y="7" width="3" height="7" rx="1"/></svg>储能分配</div>
+        <div class="nav-item" data-sect="ess" onclick="nav(this,'ess')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="9" height="6" rx="1"/><path d="M12 7v2" stroke-linecap="round"/><path d="M5.5 8h1.5l-1 1.5h1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>储能配置</div>
         <div class="nav-item" data-sect="pc" onclick="nav(this,'pc')">
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4.5v4l2.5 1.5" stroke-linecap="round"/></svg>功率计算</div>
+        <div class="nav-item" data-sect="pfc" onclick="nav(this,'pfc')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h3l2-4 3 8 2-4h2" stroke-linecap="round" stroke-linejoin="round"/></svg>功率因数</div>
         <div class="nav-item" data-sect="soc" onclick="nav(this,'soc')">
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 14V7M8 14V3M13 14V9" stroke-linecap="round"/><path d="M1 14h14" stroke-linecap="round"/></svg>站级SOC</div>
         <div class="nav-item" data-sect="sym" onclick="nav(this,'sym')">
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M4 6l4-4 4 4M4 10l4 4 4-4"/><circle cx="8" cy="8" r="6"/></svg>对称分量</div>
+        <div class="nav-item" data-sect="thd" onclick="nav(this,'thd')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8c1.5-4 1.5 4 3 0s1.5-4 3 0 1.5 4 3 0 1.5-4 3 0" stroke-linecap="round"/></svg>THD谐波</div>
+        <div class="nav-item" data-sect="scr" onclick="nav(this,'scr')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 6V2M8 10v4M6 8H2M10 8h4" stroke-linecap="round"/></svg>短路比</div>
         <div class="nav-item" data-sect="siyao" onclick="nav(this,'siyao')">
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 6h6M5 9h6M5 12h3" stroke-linecap="round"/></svg>四遥点位</div>
         <div class="nav-item" data-sect="base" onclick="nav(this,'base')">
@@ -1236,6 +1252,110 @@ Model 101/103 单相/三相逆变器
           <tr><td>GOOSE 断链</td><td>组播 VLAN/网络隔离</td><td>确认网络划分、MAC 订阅、光口链路</td></tr>
           <tr><td>部分点无数据</td><td>点表映射偏移</td><td>用四遥点位计算器核对起始地址与序号</td></tr>
         </tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ============ 储能配置 ============ -->
+    <div class="sect" id="s-ess">
+      <div class="card">
+        <div class="card-title"><div class="dot"></div>储能配置计算器 · 容量 / 时长 / 度电成本</div>
+        <div class="tabbar" id="ess-tabs">
+          <div class="tab on" onclick="essMode('cap')">容量选型 E=P·h</div>
+          <div class="tab" onclick="essMode('peak')">削峰填谷</div>
+          <div class="tab" onclick="essMode('lcoe')">度电成本 LCOE</div>
+        </div>
+        <div id="ess-g-cap">
+          <div class="frm">
+            <div class="lbl"><div class="lbl-txt">功率 P <span class="lbl-unit">kW</span></div><input type="number" step="any" id="ess-p" value="500"></div>
+            <div class="lbl"><div class="lbl-txt">放电时长 h <span class="lbl-unit">h</span></div><input type="number" step="any" id="ess-h" value="2"></div>
+          </div>
+        </div>
+        <div id="ess-g-peak" style="display:none">
+          <div class="frm">
+            <div class="lbl"><div class="lbl-txt">日峰谷转移功率差 <span class="lbl-unit">kW</span></div><input type="number" step="any" id="ess-peak" value="500"></div>
+            <div class="lbl"><div class="lbl-txt">每日放电时长 <span class="lbl-unit">h</span></div><input type="number" step="any" id="ess-ph" value="2"></div>
+            <div class="lbl"><div class="lbl-txt">每日循环次数 <span class="lbl-unit">次/天</span></div><input type="number" step="any" id="ess-cyc" value="1"></div>
+          </div>
+        </div>
+        <div id="ess-g-lcoe" style="display:none">
+          <div class="frm">
+            <div class="lbl"><div class="lbl-txt">单位投资成本 <span class="lbl-unit">元/kWh</span></div><input type="number" step="any" id="ess-cost" value="1500"></div>
+            <div class="lbl"><div class="lbl-txt">运维成本 <span class="lbl-unit">元/kWh·年</span></div><input type="number" step="any" id="ess-om" value="30"></div>
+            <div class="lbl"><div class="lbl-txt">年循环次数 <span class="lbl-unit">次/年</span></div><input type="number" step="any" id="ess-n" value="330"></div>
+            <div class="lbl"><div class="lbl-txt">项目年限 <span class="lbl-unit">年</span></div><input type="number" step="any" id="ess-y" value="10"></div>
+            <div class="lbl"><div class="lbl-txt">储能容量 E <span class="lbl-unit">kWh</span></div><input type="number" step="any" id="ess-e" value="1000"></div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" onclick="calcEss()">开始计算</button><button class="btn btn-gho" onclick="rst('ess')">清空</button></div>
+        <div class="sep"></div>
+        <div class="card-title">计算结果</div>
+        <div id="ess-rst"><div class="rst-empty">点击「开始计算」查看结果</div></div>
+        <div class="hint">容量 E = P·h；削峰填谷所需容量 = 峰谷转移功率 × 放电时长；LCOE ≈ (单位投资 + 运维×年限) / (年循环次数 × 年限)。结果为工程简化估算，未计入效率衰减与资金折现。</div>
+      </div>
+    </div>
+
+    <!-- ============ 功率因数 ============ -->
+    <div class="sect" id="s-pfc">
+      <div class="card">
+        <div class="card-title"><div class="dot"></div>功率因数计算器 · Power Factor</div>
+        <div class="tabbar" id="pfc-tabs">
+          <div class="tab on" onclick="pfcMode('pq')">P·Q → S/PF</div>
+          <div class="tab" onclick="pfcMode('spf')">S·PF → P/Q</div>
+          <div class="tab" onclick="pfcMode('sp')">S·P → Q/PF</div>
+        </div>
+        <div class="frm">
+          <div class="lbl" id="pfc-g-p"><div class="lbl-txt">有功功率 P <span class="lbl-unit">kW</span></div><input type="number" step="any" id="pfc-p" value="90"></div>
+          <div class="lbl" id="pfc-g-q"><div class="lbl-txt">无功功率 Q <span class="lbl-unit">kVar</span></div><input type="number" step="any" id="pfc-q" value="43.6"></div>
+          <div class="lbl" id="pfc-g-s" style="display:none"><div class="lbl-txt">视在功率 S <span class="lbl-unit">kVA</span></div><input type="number" step="any" id="pfc-s" value="100"></div>
+          <div class="lbl" id="pfc-g-pf" style="display:none"><div class="lbl-txt">功率因数 PF <span class="lbl-unit">-1~1</span></div><input type="number" step="any" id="pfc-pf" value="0.9"></div>
+        </div>
+        <div class="sep"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" onclick="calcPfc()">开始计算</button><button class="btn btn-gho" onclick="rst('pfc')">清空</button></div>
+        <div class="sep"></div>
+        <div class="card-title">计算结果</div>
+        <div id="pfc-rst"><div class="rst-empty">点击「开始计算」查看结果</div></div>
+        <div class="hint">S² = P² + Q²，PF = P/S，φ = atan(Q/P)。感性(滞后) Q&gt;0，容性(超前) Q&lt;0。注意：本模块“功率因数”仅指 P/Q/S 的相位关系，与“一次调频”模块无关。</div>
+      </div>
+    </div>
+
+    <!-- ============ THD 谐波 ============ -->
+    <div class="sect" id="s-thd">
+      <div class="card">
+        <div class="card-title"><div class="dot"></div>谐波畸变率 THD 计算器</div>
+        <div class="lbl"><div class="lbl-txt">谐波幅值序列（逗号分隔，第 1 个为基波）</div>
+          <textarea id="thd-in" rows="3" style="width:100%;font-family:var(--mono);font-size:12px">230, 3.5, 2.1, 1.2, 0.8, 0.5, 0.3</textarea></div>
+        <div class="lbl" style="max-width:240px"><div class="lbl-txt">单位 <span class="lbl-unit">V / A</span></div>
+          <select id="thd-unit"><option value="V">V（电压）</option><option value="A">A（电流）</option></select></div>
+        <div class="sep"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" onclick="calcThd()">计算 THD</button><button class="btn btn-gho" onclick="rst('thd')">清空</button></div>
+        <div class="sep"></div>
+        <div class="card-title">计算结果</div>
+        <div id="thd-rst"><div class="rst-empty">点击「计算 THD」查看结果</div></div>
+        <div class="hint">THD = √(Σ Vn²) / V1 × 100%（n≥2）。限值参考：电流谐波多按 IEEE 519 / 国标 GB 14549；电压谐波按 GB/T 14549。此处仅作数值计算，具体合格限值依标准与电压等级而定。</div>
+      </div>
+    </div>
+
+    <!-- ============ 短路比 ============ -->
+    <div class="sect" id="s-scr">
+      <div class="card">
+        <div class="card-title"><div class="dot"></div>短路比 SCR 评估 · 弱电网接入</div>
+        <div class="tabbar" id="scr-tabs">
+          <div class="tab on" onclick="scrMode('cap')">已知短路容量</div>
+          <div class="tab" onclick="scrMode('isc')">已知短路电流</div>
+        </div>
+        <div class="frm">
+          <div class="lbl" id="scr-g-cap"><div class="lbl-txt">短路容量 Ssc <span class="lbl-unit">MVA</span></div><input type="number" step="any" id="scr-ssc" value="200"></div>
+          <div class="lbl" id="scr-g-isc" style="display:none"><div class="lbl-txt">短路电流 Isc <span class="lbl-unit">kA</span></div><input type="number" step="any" id="scr-isc" value="10"></div>
+          <div class="lbl" id="scr-g-un" style="display:none"><div class="lbl-txt">系统电压 Un <span class="lbl-unit">kV</span></div><input type="number" step="any" id="scr-un" value="10"></div>
+          <div class="lbl"><div class="lbl-txt">设备额定容量 Pn <span class="lbl-unit">MVA</span></div><input type="number" step="any" id="scr-pn" value="50"></div>
+        </div>
+        <div class="sep"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" onclick="calcScr()">开始计算</button><button class="btn btn-gho" onclick="rst('scr')">清空</button></div>
+        <div class="sep"></div>
+        <div class="card-title">计算结果</div>
+        <div id="scr-rst"><div class="rst-empty">点击「开始计算」查看结果</div></div>
+        <div class="hint">SCR = Ssc / Pn（并网点短路容量 ÷ 设备额定容量）。SCR≥3 强网；2≤SCR&lt;3 中等；1.5≤SCR&lt;2 弱网；SCR&lt;1.5 极弱网（易激发 SSO/宽频振荡）。已知 Isc 时 Ssc = √3·Un·Isc。</div>
       </div>
     </div>
 
