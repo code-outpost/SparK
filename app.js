@@ -3970,12 +3970,13 @@ function calcSym(){var Va=+document.getElementById('sym-va').value||0,Vb=+docume
   var U0=cdiv(cadd(Ua,cadd(Ub,Uc)),3);
   var U1m=Math.sqrt(U1.r*U1.r+U1.i*U1.i),U2m=Math.sqrt(U2.r*U2.r+U2.i*U2.i),U0m=Math.sqrt(U0.r*U0.r+U0.i*U0.i);
   var U1p=Math.atan2(U1.i,U1.r)*180/Math.PI,U2p=Math.atan2(U2.i,U2.r)*180/Math.PI,U0p=Math.atan2(U0.i,U0.r)*180/Math.PI;
-  var ratio=U1m>0?(U2m/U1m*100).toFixed(3):'0.000',bal=U2m<U1m*0.05,plus=U0.r>=0?'+':'';
+  var eps=U1m>0?(U2m/U1m*100):0,ratio=eps.toFixed(3),bal=eps<5,epsOk=eps<=2,plus=U0.r>=0?'+':'';
   document.getElementById('sym-rst').innerHTML='<div style="margin-bottom:10px"><span class="bdg '+(bal?'bdg-ok':'bdg-warn')+'">'+(bal?'三相平衡':'三相不平衡')+'</span></div><div class="rst-grid" style="margin-bottom:10px">'+
     '<div class="rst-item" style="border-color:rgba(16,185,129,.4)"><div class="rst-lbl" style="color:var(--ok)">正序 U1</div><div class="rst-val" style="color:var(--ok)">'+U1m.toFixed(2)+'</div><div class="rst-unit">V @ '+U1p.toFixed(1)+'°</div></div>'+
     '<div class="rst-item" style="border-color:rgba(239,68,68,.4)"><div class="rst-lbl" style="color:var(--err)">负序 U2</div><div class="rst-val" style="color:var(--err)">'+U2m.toFixed(2)+'</div><div class="rst-unit">V @ '+U2p.toFixed(1)+'°</div></div>'+
     '<div class="rst-item" style="border-color:rgba(255,176,32,.4)"><div class="rst-lbl" style="color:var(--warn)">零序 U0</div><div class="rst-val" style="color:var(--warn)">'+U0m.toFixed(2)+'</div><div class="rst-unit">V @ '+U0p.toFixed(1)+'°</div></div>'+
-    '<div class="rst-item"><div class="rst-lbl">不平衡度</div><div class="rst-val">'+ratio+'</div><div class="rst-unit">% (U2/U1)</div></div></div>'+
+    '<div class="rst-item" style="border-color:'+(epsOk?'rgba(16,185,129,.4)':'rgba(239,68,68,.4)')+'"><div class="rst-lbl" style="color:'+(epsOk?'var(--ok)':'var(--err)')+'">电压不平衡度 ε_U</div><div class="rst-val" style="color:'+(epsOk?'var(--ok)':'var(--err)')+'">'+ratio+'</div><div class="rst-unit">% (U2/U1)</div></div></div></div>'+
+    '<div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:10px;color:var(--tx2);line-height:1.7">国标 GB/T 15543：电压不平衡度正常 ≤2%（短时 ≤4%）。当前 <b style="color:'+(epsOk?'var(--ok)':'var(--err)')+'">'+(epsOk?'合格':'超限')+'</b>。电流不平衡度 I2/I1 一般要求 ≤10%。</div>'+
     '<div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px"><div class="rst-lbl" style="margin-bottom:4px">相量表达式</div><div style="font-family:var(--mono);font-size:10px;line-height:1.8;color:var(--tx2)">U1 = '+U1.r.toFixed(3)+' '+plus+U1.i.toFixed(3)+'j | U2 = '+U2.r.toFixed(3)+' '+plus+U2.i.toFixed(3)+'j | U0 = '+U0.r.toFixed(3)+' '+plus+U0.i.toFixed(3)+'j</div></div>';
   var c=document.getElementById('c-sym');if(!c._chart)c._chart=new CanvasChart(c.getContext('2d'),c);
   c._chart.bar(['U0','U1','U2'],[U0m,U1m,U2m],['#FFB020','#10B981','#EF4444']);}
@@ -4200,6 +4201,106 @@ function renderKB(){
 }
 function kbCat(e){KB_CAT=(typeof e==='string')?e:e.textContent;renderKB();}
 window.kbCat=kbCat;window.renderKB=renderKB;
+
+/* ====================================================================== */
+/* 新增计算器：功率因数 / THD / 短路比 / 储能配置                          */
+/* ====================================================================== */
+function rstItem(l,v,u,extra){return '<div class="rst-item"'+(extra?(' '+extra):'')+'><div class="rst-lbl">'+l+'</div><div class="rst-val">'+v+'</div><div class="rst-unit">'+u+'</div></div>';}
+
+/* ---------- 功率因数 ---------- */
+var PFC_MODE='pq';
+function pfcMode(m){PFC_MODE=m;
+  var tabs=document.getElementById('pfc-tabs').children;
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('on',tabs[i].getAttribute('onclick').indexOf("'"+m+"'")>=0);
+  document.getElementById('pfc-g-p').style.display=(m==='pq'||m==='sp')?'':'none';
+  document.getElementById('pfc-g-q').style.display=(m==='pq')?'':'none';
+  document.getElementById('pfc-g-s').style.display=(m==='spf'||m==='sp')?'':'none';
+  document.getElementById('pfc-g-pf').style.display=(m==='spf')?'':'none';
+}
+function calcPfc(){
+  var P=parseFloat(document.getElementById('pfc-p').value),Q=parseFloat(document.getElementById('pfc-q').value),S=parseFloat(document.getElementById('pfc-s').value),PF=parseFloat(document.getElementById('pfc-pf').value);
+  var r={};
+  if(PFC_MODE==='pq'){ if(isNaN(P)||isNaN(Q)){document.getElementById('pfc-rst').innerHTML='<div class="err">请输入有功 P 与无功 Q。</div>';return;}
+    S=Math.sqrt(P*P+Q*Q); PF=P/S; var phi=Math.atan2(Q,P)*180/Math.PI; r={P:P,Q:Q,S:S,PF:PF,phi:phi}; }
+  else if(PFC_MODE==='spf'){ if(isNaN(S)||isNaN(PF)){document.getElementById('pfc-rst').innerHTML='<div class="err">请输入视在 S 与功率因数 PF。</div>';return;}
+    if(PF<-1||PF>1){document.getElementById('pfc-rst').innerHTML='<div class="err">PF 应在 -1 ~ 1 之间。</div>';return;}
+    P=S*PF; var qmag=Math.sqrt(Math.max(0,S*S-P*P)); Q=(PF>=0?1:-1)*qmag; var phi=Math.atan2(Q,P)*180/Math.PI; r={P:P,Q:Q,S:S,PF:PF,phi:phi}; }
+  else { if(isNaN(S)||isNaN(P)){document.getElementById('pfc-rst').innerHTML='<div class="err">请输入视在 S 与有功 P。</div>';return;}
+    Q=Math.sqrt(Math.max(0,S*S-P*P)); PF=P/S; var phi=Math.atan2(Q,P)*180/Math.PI; r={P:P,Q:Q,S:S,PF:PF,phi:phi}; }
+  var type=PF>=0?'滞后(感性)':'超前(容性)';
+  document.getElementById('pfc-rst').innerHTML='<div class="rst-grid">'+rstItem('有功 P',r.P.toFixed(3),'kW')+rstItem('无功 Q',r.Q.toFixed(3),'kVar')+rstItem('视在 S',r.S.toFixed(3),'kVA')+rstItem('功率因数 PF',r.PF.toFixed(4),type)+rstItem('相位角 φ',r.phi.toFixed(2),'°')+'</div>';
+}
+window.pfcMode=pfcMode;window.calcPfc=calcPfc;
+
+/* ---------- THD 谐波 ---------- */
+function calcThd(){
+  var raw=document.getElementById('thd-in').value.trim();
+  var unit=document.getElementById('thd-unit').value;
+  var arr=raw.split(/[,\s]+/).map(function(x){return parseFloat(x);}).filter(function(n){return !isNaN(n);});
+  var box=document.getElementById('thd-rst');
+  if(arr.length<2){box.innerHTML='<div class="err">至少输入「基波 + 1 个谐波幅值」（逗号分隔）。</div>';return;}
+  var V1=arr[0]; if(V1===0){box.innerHTML='<div class="err">基波幅值不能为 0。</div>';return;}
+  var sumSq=0,rows='';
+  for(var i=1;i<arr.length;i++){var v=arr[i]; sumSq+=v*v; var pct=Math.abs(v)/Math.abs(V1)*100;
+    rows+='<div class="thd-row"><span class="thd-ord">H'+(i+1)+'</span><span class="thd-val">'+v+' '+unit+'</span><span class="thd-bar"><span class="thd-bar-f" style="width:'+Math.min(100,pct).toFixed(1)+'%"></span></span><span class="thd-pct">'+pct.toFixed(2)+'%</span></div>';}
+  var thd=Math.sqrt(sumSq)/Math.abs(V1)*100, ok=thd<=5;
+  box.innerHTML='<div class="rst-grid" style="margin-bottom:10px">'+rstItem('基波幅值 V1',V1,unit)+rstItem('谐波总畸变率 THD',thd.toFixed(3),'%')+rstItem('判定 (参考≤5%)',ok?'合格':'偏高','')+'</div>'+
+    '<div class="card-title" style="font-size:10px;margin:6px 0 2px">各次谐波占比</div><div class="thd-list">'+rows+'</div>';
+}
+window.calcThd=calcThd;
+
+/* ---------- 短路比 SCR ---------- */
+var SCR_MODE='cap';
+function scrMode(m){SCR_MODE=m;
+  var tabs=document.getElementById('scr-tabs').children;
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('on',tabs[i].getAttribute('onclick').indexOf("'"+m+"'")>=0);
+  document.getElementById('scr-g-cap').style.display=(m==='cap')?'':'none';
+  document.getElementById('scr-g-isc').style.display=(m==='isc')?'':'none';
+  document.getElementById('scr-g-un').style.display=(m==='isc')?'':'none';
+}
+function calcScr(){
+  var Pn=parseFloat(document.getElementById('scr-pn').value), box=document.getElementById('scr-rst');
+  if(isNaN(Pn)||Pn<=0){box.innerHTML='<div class="err">请输入有效的设备额定容量 Pn。</div>';return;}
+  var Ssc;
+  if(SCR_MODE==='cap'){ Ssc=parseFloat(document.getElementById('scr-ssc').value); if(isNaN(Ssc)||Ssc<=0){box.innerHTML='<div class="err">请输入有效的短路容量 Ssc。</div>';return;} }
+  else { var Isc=parseFloat(document.getElementById('scr-isc').value),Un=parseFloat(document.getElementById('scr-un').value); if(isNaN(Isc)||Isc<=0||isNaN(Un)||Un<=0){box.innerHTML='<div class="err">请输入有效的短路电流 Isc 与系统电压 Un。</div>';return;} Ssc=Math.sqrt(3)*Un*Isc; }
+  var scr=Ssc/Pn, lvl,cls;
+  if(scr>=3){lvl='强网';cls='bdg-ok';} else if(scr>=2){lvl='中等';cls='bdg-warn';} else if(scr>=1.5){lvl='弱网';cls='bdg-warn';} else {lvl='极弱网';cls='bdg-err';}
+  box.innerHTML='<div style="margin-bottom:10px"><span class="bdg '+cls+'">'+lvl+' (SCR='+scr.toFixed(2)+')</span></div>'+
+    '<div class="rst-grid">'+rstItem('短路容量 Ssc',Ssc.toFixed(2),'MVA')+rstItem('额定容量 Pn',Pn,'MVA')+rstItem('短路比 SCR',scr.toFixed(3),'')+'</div>'+
+    '<div class="hint" style="margin-top:10px">'+(scr<2?'⚠ 弱电网：并网易激发次/超同步振荡(SSO)、宽频振荡，需加强构网型控制与阻抗重塑。':'电网强度满足常规并网要求；SCR 越高系统越“硬”，稳定性越好。')+'</div>';
+}
+window.scrMode=scrMode;window.calcScr=calcScr;
+
+/* ---------- 储能配置 ---------- */
+var ESS_MODE='cap';
+function essMode(m){ESS_MODE=m;
+  var tabs=document.getElementById('ess-tabs').children;
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('on',tabs[i].getAttribute('onclick').indexOf("'"+m+"'")>=0);
+  document.getElementById('ess-g-cap').style.display=(m==='cap')?'':'none';
+  document.getElementById('ess-g-peak').style.display=(m==='peak')?'':'none';
+  document.getElementById('ess-g-lcoe').style.display=(m==='lcoe')?'':'none';
+}
+function calcEss(){
+  var box=document.getElementById('ess-rst'), out='';
+  if(ESS_MODE==='cap'){
+    var P=parseFloat(document.getElementById('ess-p').value),h=parseFloat(document.getElementById('ess-h').value);
+    if(isNaN(P)||P<=0||isNaN(h)||h<=0){box.innerHTML='<div class="err">请输入有效的功率 P 与时长 h。</div>';return;}
+    var E=P*h; out='<div class="rst-grid">'+rstItem('所需容量 E',E.toFixed(2),'kWh')+rstItem('',(E/1000).toFixed(3),'MWh')+rstItem('功率 P',P,'kW')+rstItem('时长 h',h,'h')+'</div>';
+  } else if(ESS_MODE==='peak'){
+    var Pk=parseFloat(document.getElementById('ess-peak').value),ph=parseFloat(document.getElementById('ess-ph').value),cyc=parseFloat(document.getElementById('ess-cyc').value);
+    if(isNaN(Pk)||Pk<=0||isNaN(ph)||ph<=0){box.innerHTML='<div class="err">请输入有效的峰谷转移功率差与放电时长。</div>';return;}
+    var cycN=cyc>0?cyc:1, E2=Pk*ph, day=E2*cycN, year=E2*cycN*365;
+    out='<div class="rst-grid">'+rstItem('所需容量 E',E2.toFixed(2),'kWh')+rstItem('每日放电量',day.toFixed(1),'kWh/天')+rstItem('年放电量',year.toFixed(0),'kWh/年')+rstItem('日循环次数',cycN,'次')+'</div>';
+  } else {
+    var cost=parseFloat(document.getElementById('ess-cost').value),om=parseFloat(document.getElementById('ess-om').value),n=parseFloat(document.getElementById('ess-n').value),y=parseFloat(document.getElementById('ess-y').value),E3=parseFloat(document.getElementById('ess-e').value);
+    if(isNaN(cost)||isNaN(n)||n<=0||isNaN(y)||y<=0||isNaN(E3)||E3<=0){box.innerHTML='<div class="err">请输入有效的投资/运维/循环/年限/容量。</div>';return;}
+    var totalOut=E3*n*y, lcoe=(cost+om*y)/(n*y);
+    out='<div class="rst-grid">'+rstItem('度电成本 LCOE',lcoe.toFixed(3),'元/kWh')+rstItem('总放电量',totalOut.toFixed(0),'kWh')+rstItem('总投资',(cost*E3).toFixed(0),'元')+rstItem('总运维',(om*E3*y).toFixed(0),'元')+'</div>';
+  }
+  box.innerHTML=out;
+}
+window.essMode=essMode;window.calcEss=calcEss;
 
 /* ====================================================================== */
 /* 公式速算器 Formula Lab                                                  */
