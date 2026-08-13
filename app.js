@@ -487,24 +487,25 @@ function resumeExportPDF(){
     if(!lib){flash('PDF 库加载失败，已切换为浏览器打印'); try{window.print();}catch(e){} return;}
     var name=(d.basic&&d.basic.name)?(d.basic.name+'的简历'):'简历';
     var html=buildResumeHTML(d);
-    var wrap=document.createElement('div');
-    wrap.innerHTML=html;
-    var page=wrap.querySelector('.page');
-    if(!page){flash('页面元素未找到');return;}
-    // Render off-screen in the parent document so html2pdf always has a stable DOM,
-    // regardless of whether the mobile preview iframe is currently visible.
-    wrap.style.position='fixed';
-    wrap.style.left='-9999px';
-    wrap.style.top='0';
-    wrap.style.width='794px';
-    wrap.style.zIndex='-1';
-    wrap.style.pointerEvents='none';
-    document.body.appendChild(wrap);
-    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
-    function cleanup(){if(wrap.parentNode)wrap.parentNode.removeChild(wrap);}
-    try{
-      lib().set(opt).from(page).save().then(function(){flash('PDF 已下载');cleanup();}).catch(function(err){console.error(err);cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
-    }catch(e){cleanup(); try{window.print();}catch(e2){} flash('PDF 生成失败，已改为打印');}
+    // Use an off-screen iframe so html2pdf/html2canvas render in an isolated A4-width
+    // document. This avoids mobile viewport clipping and iframe-preview visibility issues.
+    var iframe=document.createElement('iframe');
+    iframe.setAttribute('aria-hidden','true');
+    iframe.style.cssText='position:fixed;left:-9999px;top:0;width:794px;height:1200px;border:none;pointer-events:none;z-index:-1;opacity:0';
+    document.body.appendChild(iframe);
+    var idoc=iframe.contentDocument||iframe.contentWindow.document;
+    idoc.open();idoc.write(html);idoc.close();
+    function doExport(){
+      var page=idoc.querySelector('.page');
+      if(!page){flash('页面元素未找到');if(iframe.parentNode)iframe.parentNode.removeChild(iframe);return;}
+      var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
+      function cleanup(){if(iframe.parentNode)iframe.parentNode.removeChild(iframe);}
+      try{
+        lib().set(opt).from(page).save().then(function(){flash('PDF 已下载');cleanup();}).catch(function(err){console.error(err);cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
+      }catch(e){cleanup(); try{window.print();}catch(e2){} flash('PDF 生成失败，已改为打印');}
+    }
+    // Give the iframe a moment to apply CSS before rendering.
+    setTimeout(doExport, 300);
   });
 }
 function downloadBlob(content,fn,type){var blob=new Blob([content],{type:type+';charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){try{URL.revokeObjectURL(a.href);}catch(e){}},1500);}
@@ -3616,28 +3617,109 @@ window.renderJD=renderJD;window.jdCat=jdCat;window.jdToggle=jdToggle;window.jdAn
 /* 能力雷达图                                                            */
 /* ====================================================================== */
 var RADAR_DIMS=[
-  {k:'dc',t:'数采(子阵级)'},
-  {k:'sp',t:'SPPC(站级)'},
-  {k:'sc',t:'场景广度'},
-  {k:'cm',t:'协议与通信'},
-  {k:'au',t:'自动化/脚本'},
-  {k:'doc',t:'文档与报告'}
+  {k:'dc',t:'数采(子阵级)',skills:['proto','dom'],w:[0.5,0.5]},
+  {k:'sp',t:'SPPC(站级)',skills:['dom','proto'],w:[0.7,0.3]},
+  {k:'sc',t:'场景广度',skills:['dom','soft'],w:[0.8,0.2]},
+  {k:'cm',t:'协议与通信',skills:['proto'],w:[1.0]},
+  {k:'au',t:'自动化/脚本',skills:['lang','hw'],w:[0.6,0.4]},
+  {k:'doc',t:'文档与报告',skills:['soft'],w:[1.0]}
 ];
 function buildRadarInputs(){
   document.getElementById('radar-inputs').innerHTML=RADAR_DIMS.map(function(d){
     return '<div class="lbl"><div class="lbl-txt">'+d.t+'</div><input type="number" id="rad_'+d.k+'" min="0" max="10" value="5" step="1"></div>';
   }).join('');
+  var sel=document.getElementById('radar-target');
+  if(sel && typeof JD_CATS!=='undefined'){
+    var cur=sel.value;
+    sel.innerHTML='<option value="">-- 不对比，仅自评 --</option><option value="__ALL__">全部岗位平均要求</option>'+
+      JD_CATS.filter(function(c){return c!=='全部';}).map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+    sel.value=cur;
+  }
 }
 function readRadar(){
   return RADAR_DIMS.map(function(d){var v=+document.getElementById('rad_'+d.k).value;return isNaN(v)?0:Math.max(0,Math.min(10,v));});
 }
+function getRadarTarget(cat){
+  var list=JD_LIB;
+  if(cat && cat!=='__ALL__') list=JD_LIB.filter(function(j){return j.cat===cat;});
+  if(!list.length) return null;
+  var n=list.length;
+  return RADAR_DIMS.map(function(dim){
+    var sum=0;
+    list.forEach(function(j){
+      var cov=0;
+      dim.skills.forEach(function(sk,idx){cov+=((j.skills[sk]||[]).length>0?1:0)*(dim.w[idx]||0);});
+      sum+=Math.min(cov,1);
+    });
+    return Math.round(sum/n*10);
+  });
+}
+function getRadarSkills(cat){
+  var list=JD_LIB;
+  if(cat && cat!=='__ALL__') list=JD_LIB.filter(function(j){return j.cat===cat;});
+  var map={};
+  list.forEach(function(j){
+    RADAR_DIMS.forEach(function(dim){
+      dim.skills.forEach(function(sk){
+        (j.skills[sk]||[]).forEach(function(s){var key=dim.k+'|'+s;map[key]=(map[key]||0)+1;});
+      });
+    });
+  });
+  var res={};
+  RADAR_DIMS.forEach(function(dim){
+    var arr=[];
+    Object.keys(map).forEach(function(k){if(k.indexOf(dim.k+'|')===0) arr.push({s:k.split('|')[1],n:map[k]});});
+    arr.sort(function(a,b){return b.n-a.n;});
+    res[dim.k]=arr.slice(0,5);
+  });
+  return res;
+}
+function renderRadarAnalysis(current,target){
+  var box=document.getElementById('radar-analysis');
+  if(!box) return;
+  if(!target){box.innerHTML='';return;}
+  var gaps=[];
+  RADAR_DIMS.forEach(function(dim,i){
+    var c=current[i],t=target[i],gap=t-c;
+    gaps.push({dim:dim,t:t,c:c,gap:gap,i:i});
+  });
+  gaps.sort(function(a,b){return b.gap-a.gap;});
+  var html='<div class="radar-analysis"><div class="card-title" style="font-size:10px;margin-bottom:8px"><div class="dot" style="width:4px;height:4px"></div>差距分析</div>';
+  var avg=current.reduce(function(s,v){return s+v;},0)/current.length;
+  html+='<div class="gap-row"><span class="gap-name">平均自评</span><span class="gap-val">'+avg.toFixed(1)+' / 10</span></div>';
+  gaps.forEach(function(g){
+    var cls=g.gap>0?'under':(g.gap<0?'ok':'');
+    html+='<div class="gap-row"><span class="gap-name">'+g.dim.t+'</span><span class="gap-bar"><i class="'+cls+'" style="width:'+Math.min(100,g.t*10)+'%"></i></span><span class="gap-val">'+g.c+' / '+g.t+'</span></div>';
+  });
+  html+='</div>';
+  var topGap=gaps.filter(function(g){return g.gap>0;}).slice(0,3);
+  if(topGap.length){
+    var sel=document.getElementById('radar-target');
+    var skillMap=getRadarSkills(sel?sel.value:'');
+    html+='<div class="radar-skills"><strong>建议优先补强（按 JD 高频技能）：</strong><br>';
+    topGap.forEach(function(g){
+      var skills=(skillMap[g.dim.k]||[]).map(function(x){return x.s;}).join('、');
+      html+='• <b>'+g.dim.t+'</b>：'+skills+'<br>';
+    });
+    html+='</div>';
+  }
+  box.innerHTML=html;
+}
 function drawRadar(prev){
   var vals=readRadar();
   var labels=RADAR_DIMS.map(function(d){return d.t;});
+  var sel=document.getElementById('radar-target');
+  var target=(sel&&sel.value)?getRadarTarget(sel.value):null;
   var c=document.getElementById('c-radar');
   if(!c._chart)c._chart=new CanvasChart(c.getContext('2d'),c);
-  c._chart.radar(labels,vals,'#FF8C42',prev);
-  document.getElementById('radar-tip').textContent=prev?'当前(橙) vs 上次(蓝) 对比':'各维度 0~10 自评。可「保存本次」后用「对比上次」看成长。';
+  c._chart.radar(labels,vals,'#FF8C42',prev,target);
+  var tip='各维度 0~10 自评。';
+  if(prev && target) tip='当前(橙) vs 上次(蓝) vs 目标(蓝虚线)';
+  else if(prev) tip='当前(橙) vs 上次(蓝) 对比';
+  else if(target) tip='当前(橙) vs 目标岗位(蓝虚线)。差距与建议见下方。';
+  else tip='各维度 0~10 自评。可「保存本次」后用「对比上次」看成长。';
+  document.getElementById('radar-tip').textContent=tip;
+  renderRadarAnalysis(vals,target);
 }
 function saveRadar(){
   try{localStorage.setItem('spark_radar_prev',JSON.stringify(readRadar()));document.getElementById('radar-tip').textContent='已保存本次为「上次」，下次可对比。';}catch(e){}
@@ -3650,6 +3732,7 @@ function cmpRadar(){
 }
 function rstRadar(){
   RADAR_DIMS.forEach(function(d){var e=document.getElementById('rad_'+d.k);if(e)e.value=0;});
+  var sel=document.getElementById('radar-target');if(sel)sel.value='';
   drawRadar();
 }
 window.drawRadar=drawRadar;window.saveRadar=saveRadar;window.cmpRadar=cmpRadar;window.rstRadar=rstRadar;
@@ -3835,8 +3918,8 @@ var pcMode='direct';
 function pcTab(el,m){document.querySelectorAll('#s-pc .tab').forEach(function(x){x.classList.remove('on')});el.classList.add('on');pcMode=m;
   ['direct','pf','pq','sq'].forEach(function(x){var e=document.getElementById('pc-'+x);if(e)e.style.display=x===m?'block':'none';});}
 function calcPc(){var P,Q,S,PF,phi;
-  if(pcMode==='direct'){var U=+document.getElementById('pc-u').value,I=+document.getElementById('pc-i').value,tu=(+document.getElementById('pc-tu').value)*Math.PI/180,ti=(+document.getElementById('pc-ti').value)*Math.PI/180,dth=tu-ti;S=3*U*I;P=S*Math.cos(dth);Q=S*Math.sin(dth);PF=Math.cos(dth);phi=dth*180/Math.PI;}
-  else if(pcMode==='pf'){var U=+document.getElementById('pc-pf-u').value,I=+document.getElementById('pc-pf-i').value;PF=+document.getElementById('pc-pf-pf').value;S=3*U*I;P=S*PF;Q=Math.sqrt(Math.max(0,S*S-P*P));phi=Math.acos(PF)*180/Math.PI;}
+  if(pcMode==='direct'){var U=+document.getElementById('pc-u').value,I=+document.getElementById('pc-i').value,tu=(+document.getElementById('pc-tu').value)*Math.PI/180,ti=(+document.getElementById('pc-ti').value)*Math.PI/180,dth=tu-ti;S=Math.sqrt(3)*U*I;P=S*Math.cos(dth);Q=S*Math.sin(dth);PF=Math.cos(dth);phi=dth*180/Math.PI;}
+  else if(pcMode==='pf'){var U=+document.getElementById('pc-pf-u').value,I=+document.getElementById('pc-pf-i').value;PF=+document.getElementById('pc-pf-pf').value;S=Math.sqrt(3)*U*I;P=S*PF;Q=Math.sqrt(Math.max(0,S*S-P*P));phi=Math.acos(PF)*180/Math.PI;}
   else if(pcMode==='pq'){P=+document.getElementById('pc-pq-p').value;PF=+document.getElementById('pc-pq-pf').value;S=P/PF;Q=Math.sqrt(Math.max(0,S*S-P*P));phi=Math.acos(PF)*180/Math.PI;}
   else{S=+document.getElementById('pc-sq-s').value;P=+document.getElementById('pc-sq-p').value;Q=Math.sqrt(Math.max(0,S*S-P*P));PF=P/S;phi=Math.acos(PF)*180/Math.PI;}
   var pfCls=Math.abs(PF)>=0.8?'bdg-ok':Math.abs(PF)>=0.5?'bdg-warn':'bdg-err',pfTxt=PF>=0?(Math.abs(PF)>=0.8?'正常':'偏低'):'容性';
@@ -3879,7 +3962,7 @@ window.addSocRow=addSocRow;window.calcSoc=calcSoc;
 /* ====================================================================== */
 function calcSym(){var Va=+document.getElementById('sym-va').value||0,Vb=+document.getElementById('sym-vb').value||0,Vc=+document.getElementById('sym-vc').value||0;
   var ta=(+document.getElementById('sym-ta').value)*Math.PI/180,tb=(+document.getElementById('sym-tb').value)*Math.PI/180,tc=(+document.getElementById('sym-tc').value)*Math.PI/180;
-  var Ua={r:Va,i:0},Ub={r:Vb*Math.cos(tb),i:Vb*Math.sin(tb)},Uc={r:Vc*Math.cos(tc),i:Vc*Math.sin(tc)};
+  var Ua={r:Va*Math.cos(ta),i:Va*Math.sin(ta)},Ub={r:Vb*Math.cos(tb),i:Vb*Math.sin(tb)},Uc={r:Vc*Math.cos(tc),i:Vc*Math.sin(tc)};
   var ar=-0.5,ai=0.866025,a2r=-0.5,a2i=-0.866025;
   function cmul(a,b){return{r:a.r*b.r-a.i*b.i,i:a.r*b.i+a.i*b.r};}function cadd(a,b){return{r:a.r+b.r,i:a.i+b.i};}function cdiv(a,n){return{r:a.r/n,i:a.i/n};}
   var U1=cdiv(cadd(Ua,cadd(cmul({r:ar,i:ai},Ub),cmul({r:a2r,i:a2i},Uc))),3);
@@ -4259,8 +4342,8 @@ CanvasChart.prototype.bar=function(labels,vals,colors){var c2d=this.ctx,c=this.c
   this._drawFn=function(){c2d.clearRect(0,0,W,H);c2d.setLineDash([3,3]);c2d.strokeStyle='rgba(35,48,63,.8)';c2d.lineWidth=1;for(var i=0;i<=4;i++){var y=pad.t+cH*i/4;c2d.beginPath();c2d.moveTo(pad.l,y);c2d.lineTo(pad.l+cW,y);c2d.stroke();c2d.fillStyle='rgba(154,167,184,.7)';c2d.font='9px Consolas,monospace';c2d.textAlign='right';c2d.fillText((maxV*(4-i)/4).toFixed(1),pad.l-4,y+3);}c2d.setLineDash([]);c2d.strokeStyle='#23303F';c2d.lineWidth=1;c2d.beginPath();c2d.moveTo(pad.l,pad.t);c2d.lineTo(pad.l,pad.t+cH);c2d.lineTo(pad.l+cW,pad.t+cH);c2d.stroke();
     vals.forEach(function(v,i){var bh=Math.abs(v)/maxV*cH,bx=pad.l+gap*(i+1)+barW*i,by=v>=0?pad.t+cH-bh:pad.t+cH;c2d.fillStyle=colors[i]||'#FF8C42';c2d.fillRect(bx,by,barW,bh);c2d.fillStyle='#E6EAF0';c2d.font='9px Consolas,monospace';c2d.textAlign='center';c2d.fillText(v.toFixed(1),bx+barW/2,by-3);c2d.fillStyle='#9AA7B8';c2d.font='9px system-ui,sans-serif';c2d.textAlign='center';c2d.fillText(labels[i],bx+barW/2,pad.t+cH+14);});};this._drawFn();};
 CanvasChart.prototype.hBar=function(labels,vals,colors){var c2d=this.ctx,c=this.canvas,W=c.width,H=c.height,pad={t:10,r:20,b:20,l:80},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b,n=vals.length,maxV=Math.max.apply(null,Array.from(vals).map(function(v){return Math.abs(parseFloat(v)||0);}).concat([1])),barH=Math.min(22,(cH/n)-4),gapY=(cH-barH*n)/(n+1),self=this;
-  this._drawFn=function(){c2d.clearRect(0,0,W,H);c2d.setLineDash([3,3]);c2d.strokeStyle='rgba(35,48,63,.8)';c2d.lineWidth=1;for(var i=0;i<=4;i++){var x=pad.l+cW*i/4;c2d.beginPath();c2d.moveTo(x,pad.t);c2d.lineTo(x,pad.t+cH);c2d.stroke();c2d.fillStyle='rgba(154,167,184,.7)';c2d.font='9px Consolas,monospace';c2d.textAlign='center';c2d.fillText((maxV*(4-i)/4).toFixed(1),x,pad.t-3);}c2d.setLineDash([]);
-    vals.forEach(function(v,i){var vi=parseFloat(v)||0,bw=vi/maxV*cW,bx=pad.l,by=pad.t+gapY*(i+1)+barH*i;c2d.fillStyle=colors[i]||'#FF8C42';c2d.fillRect(bx,by,bw,barH);c2d.fillStyle='#E6EAF0';c2d.font='9px Consolas,monospace';c2d.textAlign='right';c2d.fillText(v,bx+cW+4,by+barH/2+3);c2d.fillStyle='#9AA7B8';c2d.font='10px system-ui,sans-serif';c2d.textAlign='right';c2d.fillText(labels[i],pad.l-6,by+barH/2+3);});c2d.strokeStyle='#23303F';c2d.lineWidth=1;c2d.beginPath();c2d.moveTo(pad.l,pad.t);c2d.lineTo(pad.l,pad.t+cH);c2d.stroke();};this._drawFn();};
+  this._drawFn=function(){c2d.clearRect(0,0,W,H);c2d.setLineDash([3,3]);c2d.strokeStyle='rgba(35,48,63,.8)';c2d.lineWidth=1;for(var i=0;i<=4;i++){var x=pad.l+cW*i/4;c2d.beginPath();c2d.moveTo(x,pad.t);c2d.lineTo(x,pad.t+cH);c2d.stroke();c2d.fillStyle='rgba(154,167,184,.7)';c2d.font='9px Consolas,monospace';c2d.textAlign='center';c2d.fillText((maxV*i/4).toFixed(1),x,pad.t-3);}c2d.setLineDash([]);
+    vals.forEach(function(v,i){var vi=parseFloat(v)||0,bw=vi/maxV*cW,bx=pad.l,by=pad.t+gapY*(i+1)+barH*i;c2d.fillStyle=colors[i]||'#FF8C42';c2d.fillRect(bx,by,bw,barH);c2d.fillStyle='#E6EAF0';c2d.font='9px Consolas,monospace';c2d.textAlign='left';c2d.fillText(v,bx+bw+4,by+barH/2+3);c2d.fillStyle='#9AA7B8';c2d.font='10px system-ui,sans-serif';c2d.textAlign='right';c2d.fillText(labels[i],pad.l-6,by+barH/2+3);});c2d.strokeStyle='#23303F';c2d.lineWidth=1;c2d.beginPath();c2d.moveTo(pad.l,pad.t);c2d.lineTo(pad.l,pad.t+cH);c2d.lineTo(pad.l+cW,pad.t+cH);c2d.stroke();};this._drawFn();};
 CanvasChart.prototype.quLine=function(xs,ys,cx,cy){var c2d=this.ctx,c=this.canvas,W=c.width,H=c.height,pad={t:15,r:20,b:45,l:50},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b,xMin=Math.min.apply(null,xs),xMax=Math.max.apply(null,xs),yMin=Math.min.apply(null,ys),yMax=Math.max.apply(null,ys),xR=xMax-xMin||1,yR=yMax-yMin||1;if(yMin===yMax){yMin-=0.5;yMax+=0.5;yR=1;}
   var toX=function(x){return pad.l+(x-xMin)/xR*cW;},toY=function(y){return pad.t+cH-(y-yMin)/yR*cH;},self=this;
   this._drawFn=function(){c2d.clearRect(0,0,W,H);c2d.setLineDash([3,3]);c2d.strokeStyle='rgba(35,48,63,.8)';c2d.lineWidth=1;for(var i=0;i<=4;i++){var y=pad.t+cH*i/4;c2d.beginPath();c2d.moveTo(pad.l,y);c2d.lineTo(pad.l+cW,y);c2d.stroke();var val=yMin+yR*(4-i)/4;c2d.fillStyle='rgba(154,167,184,.7)';c2d.font='9px Consolas,monospace';c2d.textAlign='right';c2d.fillText(val.toFixed(2),pad.l-4,y+3);}c2d.setLineDash([]);
@@ -4278,12 +4361,13 @@ CanvasChart.prototype.pfCurve=function(xs,ys,fn,fd,f_real,total){var c2d=this.ct
     c2d.strokeStyle='#FF8C42';c2d.lineWidth=2;c2d.beginPath();xs.forEach(function(x,i){var px=toX(x),py=toY(ys[i]);if(i===0)c2d.moveTo(px,py);else c2d.lineTo(px,py);});c2d.stroke();
     var px=toX(f_real),py=toY(total);c2d.fillStyle=total>0?'#10B981':total<0?'#EF4444':'#9AA7B8';c2d.beginPath();c2d.arc(px,py,6,0,Math.PI*2);c2d.fill();c2d.strokeStyle='#fff';c2d.lineWidth=2;c2d.stroke();c2d.fillStyle='#E6EAF0';c2d.font='9px Consolas,monospace';c2d.textAlign='center';c2d.fillText('f='+f_real.toFixed(3)+' ΔP='+total.toFixed(2),px,py-12);
     c2d.strokeStyle='#23303F';c2d.lineWidth=1;c2d.beginPath();c2d.moveTo(pad.l,pad.t);c2d.lineTo(pad.l,pad.t+cH);c2d.lineTo(pad.l+cW,pad.t+cH);c2d.stroke();c2d.fillStyle='#5B6B7E';c2d.font='9px system-ui,sans-serif';c2d.textAlign='center';c2d.fillText('f (Hz)',pad.l+cW/2,pad.t+cH+28);c2d.save();c2d.translate(10,pad.t+cH/2);c2d.rotate(-Math.PI/2);c2d.textAlign='center';c2d.fillText('ΔP (kW)',0,0);c2d.restore();};this._drawFn();};
-CanvasChart.prototype.radar=function(labels,vals,color,prev){var c2d=this.ctx,c=this.canvas,W=c.width,H=c.height,cx=W/2,cy=H/2,R=Math.min(W,H)/2-42,n=labels.length,self=this;
+CanvasChart.prototype.radar=function(labels,vals,color,prev,target){var c2d=this.ctx,c=this.canvas,W=c.width,H=c.height,cx=W/2,cy=H/2,R=Math.min(W,H)/2-42,n=labels.length,self=this;
   this._drawFn=function(){c2d.clearRect(0,0,W,H);for(var ring=1;ring<=4;ring++){c2d.beginPath();for(var i=0;i<=n;i++){var ang=-Math.PI/2+i*2*Math.PI/n,rr=R*ring/4,x=cx+rr*Math.cos(ang),y=cy+rr*Math.sin(ang);if(i===0)c2d.moveTo(x,y);else c2d.lineTo(x,y);}c2d.strokeStyle='rgba(35,48,63,.7)';c2d.lineWidth=1;c2d.stroke();}
     c2d.fillStyle='#9AA7B8';c2d.font='10px system-ui,sans-serif';c2d.textAlign='center';
     for(var i=0;i<n;i++){var ang=-Math.PI/2+i*2*Math.PI/n,x=cx+R*Math.cos(ang),y=cy+R*Math.sin(ang);c2d.strokeStyle='rgba(35,48,63,.7)';c2d.lineWidth=1;c2d.beginPath();c2d.moveTo(cx,cy);c2d.lineTo(x,y);c2d.stroke();var lx=cx+(R+16)*Math.cos(ang),ly=cy+(R+16)*Math.sin(ang);c2d.fillText(labels[i],lx,ly+3);}
-    function poly(valsArr,col,fillA){c2d.beginPath();for(var i=0;i<=n;i++){var idx=i%n,ang=-Math.PI/2+idx*2*Math.PI/n,rr=R*(valsArr[idx]/10),x=cx+rr*Math.cos(ang),y=cy+rr*Math.sin(ang);if(i===0)c2d.moveTo(x,y);else c2d.lineTo(x,y);}c2d.closePath();c2d.fillStyle=hexToRgba(col,fillA);c2d.fill();c2d.strokeStyle=col;c2d.lineWidth=2;c2d.stroke();for(var i=0;i<n;i++){var ang=-Math.PI/2+i*2*Math.PI/n,rr=R*(valsArr[i]/10),x=cx+rr*Math.cos(ang),y=cy+rr*Math.sin(ang);c2d.fillStyle=col;c2d.beginPath();c2d.arc(x,y,3,0,Math.PI*2);c2d.fill();}}
+    function poly(valsArr,col,fillA,lineDash){c2d.beginPath();for(var i=0;i<=n;i++){var idx=i%n,ang=-Math.PI/2+idx*2*Math.PI/n,rr=R*(valsArr[idx]/10),x=cx+rr*Math.cos(ang),y=cy+rr*Math.sin(ang);if(i===0)c2d.moveTo(x,y);else c2d.lineTo(x,y);}c2d.closePath();c2d.fillStyle=hexToRgba(col,fillA);c2d.fill();c2d.strokeStyle=col;c2d.lineWidth=2;if(lineDash)c2d.setLineDash(lineDash);else c2d.setLineDash([]);c2d.stroke();c2d.setLineDash([]);for(var i=0;i<n;i++){var ang=-Math.PI/2+i*2*Math.PI/n,rr=R*(valsArr[i]/10),x=cx+rr*Math.cos(ang),y=cy+rr*Math.sin(ang);c2d.fillStyle=col;c2d.beginPath();c2d.arc(x,y,3,0,Math.PI*2);c2d.fill();}}
     if(prev)poly(prev,'#38BDF8',0.12);
+    if(target)poly(target,'#38BDF8',0.0,[4,3]);
     poly(vals,color,0.18);};this._drawFn();};
 
 /* 图表 resize 总控 */
