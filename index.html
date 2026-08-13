@@ -142,7 +142,7 @@ textarea{font-family:var(--mono);resize:vertical}
 @keyframes pls{0%,100%{opacity:1}50%{opacity:.4}}
 .pls{animation:pls 2s infinite}
 .full{grid-column:1/-1}
-@media(max-width:900px){.layout{padding:12px}.panel-grid{grid-template-columns:1fr}.soc-grid{grid-template-columns:1fr}.sp-cards{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}.frm{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.layout{padding:12px}.panel-grid{grid-template-columns:1fr}.soc-grid{grid-template-columns:1fr}.soc-grid>div{min-width:0}.sp-cards{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}.frm{grid-template-columns:1fr 1fr}}
 @media(max-width:1024px){
   .hamburger{display:flex}
   .sidebar-overlay{display:none}
@@ -171,7 +171,7 @@ textarea{font-family:var(--mono);resize:vertical}
   .tab{flex:0 0 auto;padding:6px 12px;font-size:calc(11px*var(--fs))}
   .tabbar::after{content:'';position:absolute;right:0;top:0;bottom:0;width:22px;background:linear-gradient(90deg,transparent,var(--bg3));pointer-events:none;opacity:.85}
 }
-@media(max-width:480px){.hero-title{font-size:28px}.stat-grid{grid-template-columns:1fr}.hero{padding:16px 12px}.frm{grid-template-columns:1fr}.frm3,.frm4{grid-template-columns:1fr 1fr!important}.siyao-grid{grid-template-columns:1fr 1fr}.tbl{font-size:10px}}
+@media(max-width:480px){.hero-title{font-size:28px}.stat-grid{grid-template-columns:1fr}.hero{padding:16px 12px}.frm{grid-template-columns:1fr}.frm3,.frm4{grid-template-columns:1fr 1fr!important}.siyao-grid{grid-template-columns:1fr 1fr}.tbl{font-size:10px}#s-soc .chart-wrap{height:220px}#s-soc .tbl-scroll>.tbl input{min-width:44px;padding:2px 3px;font-size:9px}}
 /* Desktop: fixed left sidebar with logo header */
 @media(min-width:1025px){
   #appLayout{display:block}
@@ -242,6 +242,19 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
 /* 雷达 */
 .radar-wrap{background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:10px;margin-top:12px;min-height:320px;display:flex;align-items:center;justify-content:center}
 .radar-wrap canvas{max-width:100%}
+.radar-analysis{margin-top:12px}
+.radar-analysis .gap-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid rgba(35,48,63,.4);font-size:11px}
+.radar-analysis .gap-row:last-child{border-bottom:none}
+.radar-analysis .gap-name{color:var(--tx2);flex-shrink:0}
+.radar-analysis .gap-bar{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;min-width:60px}
+.radar-analysis .gap-bar>i{display:block;height:100%;border-radius:3px;background:var(--acc)}
+.radar-analysis .gap-bar>i.under{background:var(--err)}
+.radar-analysis .gap-bar>i.ok{background:var(--ok)}
+.radar-analysis .gap-val{font-family:var(--mono);font-size:10px;color:var(--tx3);white-space:nowrap}
+.radar-skills{background:var(--bg);border:1px solid var(--bd);border-radius:7px;padding:8px 10px;margin-top:10px;font-size:11px;color:var(--tx2);line-height:1.6}
+.radar-skills strong{color:var(--acc)}
+.inp,select{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--tx);font-family:var(--sans);font-size:calc(11px*var(--fs));box-sizing:border-box}
+.inp:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3)}
 /* 文本输出 */
 .out-box{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:12px;font-family:var(--mono);font-size:11px;color:var(--tx);line-height:1.7;white-space:pre-wrap;word-break:break-word;min-height:120px;max-height:480px;overflow:auto}
 /* 字体缩放 */
@@ -790,6 +803,13 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
         <div class="card">
           <div class="card-title"><div class="dot"></div>能力自评（0~10）</div>
           <div class="frm" id="radar-inputs"></div>
+          <div class="lbl" style="margin-top:8px">
+            <div class="lbl-txt">目标岗位（从 JD 库提取能力要求）</div>
+            <select id="radar-target" class="inp" onchange="drawRadar()">
+              <option value="">-- 不对比，仅自评 --</option>
+              <option value="__ALL__">全部岗位平均要求</option>
+            </select>
+          </div>
           <div class="sep"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-pri" onclick="drawRadar()">绘制雷达图</button>
@@ -797,12 +817,13 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
             <button class="btn btn-gho" onclick="cmpRadar()">对比上次</button>
             <button class="btn btn-dng" onclick="rstRadar()">清空</button>
           </div>
-          <div class="hint">数据保存在浏览器本地（localStorage），可多次记录对比成长轨迹。</div>
+          <div class="hint">选择「目标岗位」后，雷达图会叠加岗位要求（蓝色虚线），下方给出差距分析和建议补强的技能。</div>
         </div>
         <div class="card">
           <div class="card-title"><div class="dot"></div>能力雷达图</div>
           <div class="radar-wrap"><canvas id="c-radar"></canvas></div>
           <div id="radar-tip" class="hint">左侧给 6 个维度打分后点击「绘制雷达图」。</div>
+          <div id="radar-analysis"></div>
         </div>
       </div>
     </div>
