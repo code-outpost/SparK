@@ -503,10 +503,16 @@ function isMobileUA(){return /Android|iPhone|iPad|iPod|Mobile|Windows Phone|Harm
 function resumeExportPDF(){
   var d=RESUME_STATE.data;
   if(!d){flash('没有可导出的简历数据');return;}
-  if(isMobileUA() && _h2p){ exportMobile(d); return; }       // 手机：新标签页打开 PDF（保留手势）
-  if(isMobileUA()){ exportPrint(d); loadHtml2pdf(function(){}); return; } // 手机且引擎未就绪：系统打印兜底
-  if(_h2p){ exportHtml2pdf(d); return; }                     // 桌面：html2pdf 直接下载
-  exportPrint(d); loadHtml2pdf(function(){});                // 桌面兜底
+  // 统一用 html2pdf 生成真正的 PDF 文件下载（桌面 / 手机一致），不再走
+  // window.open 弹窗（手机浏览器会拦截 → 误触发浏览器打印）。
+  // 若引擎尚未就绪（例如刚进页面就点「导出 PDF」），先等它加载完成再生成，
+  // 避免误走到「浏览器打印」兜底。
+  if(_h2p){ exportHtml2pdf(d); return; }
+  flash('正在准备 PDF 引擎…');
+  loadHtml2pdf(function(lib){
+    if(lib){ exportHtml2pdf(d); }
+    else { exportPrint(d); }   // 仅在 html2pdf 实在不可用（离线且 CDN 也不可达）时才退化为打印
+  });
 }
 function exportHtml2pdf(d){
   flash('正在生成 PDF…');
@@ -524,38 +530,12 @@ function exportHtml2pdf(d){
     if(!page){cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');return;}
     var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
     try{
-      _h2p.set(opt).from(page).save().then(function(){flash('PDF 已下载');cleanup();}).catch(function(err){console.error(err);cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
+      // html2pdf 的全局对象是一个工厂函数，必须 html2pdf() 调用来拿到 Worker 实例，
+      // 再链式 .set().from().save()。直接 _h2p.set(...) 会因 _h2p.set 为 undefined 抛错，
+      // 被外层 catch 捕获后误走到 window.print()。这里兼容「已是实例」的情况。
+      var worker=(typeof _h2p==='function')?_h2p():_h2p;
+      worker.set(opt).from(page).save().then(function(){flash('PDF 已下载');cleanup();}).catch(function(err){console.error(err);cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
     }catch(e){cleanup(); try{window.print();}catch(e2){} flash('PDF 生成失败，已改为打印');}
-  },300);
-}
-function exportMobile(d){
-  flash('正在生成 PDF…');
-  var name=(d.basic&&d.basic.name)?(d.basic.name+'的简历'):'简历';
-  // 同步打开新标签页以保留用户手势（手机对异步 download 拦截严重）
-  var w=window.open('', '_blank');
-  if(!w){ exportPrint(d); return; }
-  w.document.write('<html><head><meta charset="utf-8"><title>'+rEsc(name)+'</title></head><body style="font-family:sans-serif;padding:24px;color:#333">正在生成简历 PDF…</body></html>');
-  var html=buildResumeHTML(d);
-  var iframe=document.createElement('iframe');
-  iframe.setAttribute('aria-hidden','true');
-  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:794px;height:1200px;border:none;pointer-events:none;z-index:-1;opacity:0';
-  document.body.appendChild(iframe);
-  var idoc=iframe.contentDocument||iframe.contentWindow.document;
-  idoc.open();idoc.write(html);idoc.close();
-  function cleanup(){if(iframe.parentNode)iframe.parentNode.removeChild(iframe);}
-  setTimeout(function(){
-    var page=idoc.querySelector('.page');
-    if(!page){cleanup();try{w.close();}catch(e){}exportPrint(d);return;}
-    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
-    try{
-      _h2p.set(opt).from(page).outputPdf('blob').then(function(blob){
-        var url=URL.createObjectURL(blob);
-        try{w.location.href=url;}catch(e){try{w.location=url;}catch(e2){}}
-        setTimeout(function(){try{URL.revokeObjectURL(url);}catch(e){}},60000);
-        cleanup();
-        flash('PDF 已在新标签页打开，可保存 / 分享');
-      }).catch(function(err){console.error(err);cleanup();try{w.close();}catch(e){}exportPrint(d);});
-    }catch(e){cleanup();try{w.close();}catch(e2){}exportPrint(d);}
   },300);
 }
 function exportPrint(d){
