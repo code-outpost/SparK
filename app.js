@@ -118,15 +118,34 @@ function resumePick(){
   var box=document.getElementById('r-tpl-grid');if(!box)return;
   var T=window.RESUME_TEMPLATES||{},keys=Object.keys(T);
   if(!keys.length){box.innerHTML='<div class="rst-empty">未找到模板文件（jl/templates.js）</div>';return;}
+  // 卡片只放占位容器；预览用真实模板 HTML 渲染（兼容手机端，不再依赖内嵌 PDF）
   box.innerHTML=keys.map(function(id){
-    var t=T[id],b=t.basic||{},tc=(t.globalSettings&&t.globalSettings.themeColor)||'#000';
-    var pdf=t.pdfId||(t.id&&String(t.id).split('-')[0].slice(0,6))||'';
-    var pdfEl=pdf?'<embed src="jl/'+rEsc(pdf)+'.pdf#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" class="r-tpl-pdf">':'<span style="color:'+rEsc(tc)+'">'+rEsc(b.name||'简历')+'</span>';
+    var t=T[id],b=t.basic||{};
     return '<div class="r-tpl" onclick="resumeOpen(\''+id+'\')">'+
-      '<div class="r-tpl-prev" style="background:'+rEsc(tc)+'14">'+pdfEl+'</div>'+
+      '<div class="r-tpl-prev" data-prev="'+id+'"></div>'+
       '<div class="r-tpl-name">'+rEsc(TPL_NAMES[id]||id)+'</div>'+
       '<div class="r-tpl-sub">'+rEsc(b.title||'')+'</div></div>';
   }).join('');
+  keys.forEach(function(id){
+    var host=box.querySelector('[data-prev="'+id+'"]');if(!host)return;
+    var prev=JSON.parse(JSON.stringify(T[id]));prev.templateId=id;
+    var ifr=document.createElement('iframe');
+    ifr.className='r-tpl-ifr';
+    ifr.setAttribute('title',TPL_NAMES[id]||id);
+    ifr.setAttribute('loading','lazy');
+    ifr.srcdoc=buildResumeHTML(prev);
+    host.appendChild(ifr);
+  });
+  requestAnimationFrame(fitTplPreview);
+}
+function fitTplPreview(){
+  var box=document.getElementById('r-tpl-grid');if(!box)return;
+  var hosts=box.querySelectorAll('.r-tpl-prev');
+  for(var i=0;i<hosts.length;i++){
+    var host=hosts[i],ifr=host.querySelector('iframe.r-tpl-ifr');if(!ifr)continue;
+    var w=host.clientWidth||150,scale=w/794;
+    ifr.style.transform='scale('+scale+')';
+  }
 }
 function resumeOpen(id){
   var T=window.RESUME_TEMPLATES||{};if(!T[id])return;
@@ -137,6 +156,7 @@ function resumeOpen(id){
   if(pk)pk.style.display='none';if(ed)ed.style.display='';
   var ct=document.getElementById('r-cur-tpl');if(ct)ct.textContent=TPL_NAMES[id]||id;
   resumeForm();resumePreview();
+  loadHtml2pdf(function(){}); // 预热 PDF 引擎，保证点击导出时已在用户手势内可用
   if(typeof window!=='undefined'&&window.innerWidth<=900){var eb=document.querySelector('#r-editor .r-editor-body');if(eb){eb.classList.add('r-show-form');var mb=document.querySelectorAll('.r-mtoggle button');for(var i=0;i<mb.length;i++){mb[i].classList.toggle('on',mb[i].getAttribute('data-mode')==='form');}}}
 }
 function resumeBack(){
@@ -479,34 +499,75 @@ function loadHtml2pdf(cb){
   };
   document.head.appendChild(s);
 }
+function isMobileUA(){return /Android|iPhone|iPad|iPod|Mobile|Windows Phone|HarmonyOS/i.test(navigator.userAgent||'');}
 function resumeExportPDF(){
   var d=RESUME_STATE.data;
   if(!d){flash('没有可导出的简历数据');return;}
+  if(isMobileUA() && _h2p){ exportMobile(d); return; }       // 手机：新标签页打开 PDF（保留手势）
+  if(isMobileUA()){ exportPrint(d); loadHtml2pdf(function(){}); return; } // 手机且引擎未就绪：系统打印兜底
+  if(_h2p){ exportHtml2pdf(d); return; }                     // 桌面：html2pdf 直接下载
+  exportPrint(d); loadHtml2pdf(function(){});                // 桌面兜底
+}
+function exportHtml2pdf(d){
   flash('正在生成 PDF…');
-  loadHtml2pdf(function(lib){
-    if(!lib){flash('PDF 库加载失败，已切换为浏览器打印'); try{window.print();}catch(e){} return;}
-    var name=(d.basic&&d.basic.name)?(d.basic.name+'的简历'):'简历';
-    var html=buildResumeHTML(d);
-    // Use an off-screen iframe so html2pdf/html2canvas render in an isolated A4-width
-    // document. This avoids mobile viewport clipping and iframe-preview visibility issues.
-    var iframe=document.createElement('iframe');
-    iframe.setAttribute('aria-hidden','true');
-    iframe.style.cssText='position:fixed;left:-9999px;top:0;width:794px;height:1200px;border:none;pointer-events:none;z-index:-1;opacity:0';
-    document.body.appendChild(iframe);
-    var idoc=iframe.contentDocument||iframe.contentWindow.document;
-    idoc.open();idoc.write(html);idoc.close();
-    function doExport(){
-      var page=idoc.querySelector('.page');
-      if(!page){flash('页面元素未找到');if(iframe.parentNode)iframe.parentNode.removeChild(iframe);return;}
-      var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
-      function cleanup(){if(iframe.parentNode)iframe.parentNode.removeChild(iframe);}
-      try{
-        lib().set(opt).from(page).save().then(function(){flash('PDF 已下载');cleanup();}).catch(function(err){console.error(err);cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
-      }catch(e){cleanup(); try{window.print();}catch(e2){} flash('PDF 生成失败，已改为打印');}
-    }
-    // Give the iframe a moment to apply CSS before rendering.
-    setTimeout(doExport, 300);
-  });
+  var name=(d.basic&&d.basic.name)?(d.basic.name+'的简历'):'简历';
+  var html=buildResumeHTML(d);
+  var iframe=document.createElement('iframe');
+  iframe.setAttribute('aria-hidden','true');
+  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:794px;height:1200px;border:none;pointer-events:none;z-index:-1;opacity:0';
+  document.body.appendChild(iframe);
+  var idoc=iframe.contentDocument||iframe.contentWindow.document;
+  idoc.open();idoc.write(html);idoc.close();
+  function cleanup(){if(iframe.parentNode)iframe.parentNode.removeChild(iframe);}
+  setTimeout(function(){
+    var page=idoc.querySelector('.page');
+    if(!page){cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');return;}
+    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
+    try{
+      _h2p.set(opt).from(page).save().then(function(){flash('PDF 已下载');cleanup();}).catch(function(err){console.error(err);cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
+    }catch(e){cleanup(); try{window.print();}catch(e2){} flash('PDF 生成失败，已改为打印');}
+  },300);
+}
+function exportMobile(d){
+  flash('正在生成 PDF…');
+  var name=(d.basic&&d.basic.name)?(d.basic.name+'的简历'):'简历';
+  // 同步打开新标签页以保留用户手势（手机对异步 download 拦截严重）
+  var w=window.open('', '_blank');
+  if(!w){ exportPrint(d); return; }
+  w.document.write('<html><head><meta charset="utf-8"><title>'+rEsc(name)+'</title></head><body style="font-family:sans-serif;padding:24px;color:#333">正在生成简历 PDF…</body></html>');
+  var html=buildResumeHTML(d);
+  var iframe=document.createElement('iframe');
+  iframe.setAttribute('aria-hidden','true');
+  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:794px;height:1200px;border:none;pointer-events:none;z-index:-1;opacity:0';
+  document.body.appendChild(iframe);
+  var idoc=iframe.contentDocument||iframe.contentWindow.document;
+  idoc.open();idoc.write(html);idoc.close();
+  function cleanup(){if(iframe.parentNode)iframe.parentNode.removeChild(iframe);}
+  setTimeout(function(){
+    var page=idoc.querySelector('.page');
+    if(!page){cleanup();try{w.close();}catch(e){}exportPrint(d);return;}
+    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
+    try{
+      _h2p.set(opt).from(page).outputPdf('blob').then(function(blob){
+        var url=URL.createObjectURL(blob);
+        try{w.location.href=url;}catch(e){try{w.location=url;}catch(e2){}}
+        setTimeout(function(){try{URL.revokeObjectURL(url);}catch(e){}},60000);
+        cleanup();
+        flash('PDF 已在新标签页打开，可保存 / 分享');
+      }).catch(function(err){console.error(err);cleanup();try{w.close();}catch(e){}exportPrint(d);});
+    }catch(e){cleanup();try{w.close();}catch(e2){}exportPrint(d);}
+  },300);
+}
+function exportPrint(d){
+  flash('正在打开打印 / 保存…（可选择“另存为 PDF”）');
+  var iframe=document.createElement('iframe');
+  iframe.setAttribute('aria-hidden','true');
+  iframe.style.cssText='position:fixed;left:0;top:0;width:794px;height:1200px;border:none;background:#fff;opacity:0;z-index:-1;pointer-events:none';
+  document.body.appendChild(iframe);
+  var idoc=iframe.contentDocument||iframe.contentWindow.document;
+  idoc.open();idoc.write(buildResumeHTML(d));idoc.close();
+  try{iframe.contentWindow.focus();iframe.contentWindow.print();}catch(e){try{window.print();}catch(e2){}}
+  setTimeout(function(){if(iframe.parentNode)iframe.parentNode.removeChild(iframe);},2000);
 }
 function downloadBlob(content,fn,type){var blob=new Blob([content],{type:type+';charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){try{URL.revokeObjectURL(a.href);}catch(e){}},1500);}
 function resumeExportJSON(){var d=RESUME_STATE.data;if(!d)return;var x=cleanResumeData(d);downloadBlob(JSON.stringify(x,null,2),(d.basic&&d.basic.name||'resume')+'.json','application/json');}
@@ -4476,7 +4537,7 @@ var CHART_IDS=['pv','pf','qu','sa','pc','soc','sym','radar'];
 function resizeCharts(){CHART_IDS.forEach(function(id){var c=document.getElementById('c-'+id);if(c&&c._chart){c._chart.resize();if(c._chart._drawFn)c._chart._drawFn();}});}
 /* 简历预览随容器宽度自适应缩放（仅缩放包裹器，不影响 .page，导出 PDF 仍为真实 A4） */
 var _fitRT;
-if(typeof window!=='undefined'){window.addEventListener('resize',function(){clearTimeout(_fitRT);_fitRT=setTimeout(function(){var ifr=document.getElementById('r-preview');if(ifr)fitResumePreview(ifr);},160);});}
+if(typeof window!=='undefined'){window.addEventListener('resize',function(){clearTimeout(_fitRT);_fitRT=setTimeout(function(){var ifr=document.getElementById('r-preview');if(ifr)fitResumePreview(ifr);fitTplPreview();},160);});}
 
 /* ====================================================================== */
 /* 设置 / 主题                                                          */
