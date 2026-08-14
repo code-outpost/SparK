@@ -4364,6 +4364,278 @@ function calcEss(){
 window.essMode=essMode;window.calcEss=calcEss;
 
 /* ====================================================================== */
+/* 短路电流计算（序网法）                                                 */
+/* ====================================================================== */
+var FAULT_MODE='single';
+function faultMode(m){FAULT_MODE=m;
+  var tabs=document.getElementById('fault-tabs').children;
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('on',tabs[i].getAttribute('onclick').indexOf("'"+m+"'")>=0);
+  document.getElementById('fl-right').style.display=(m==='dual')?'':'none';
+}
+function flNeuChg(){var neu=document.getElementById('fl-neu').value;document.getElementById('fl-neup').style.display=(neu==='arc'||neu==='res')?'':'none';}
+function cAdd(a,b){return{r:a.r+b.r,x:a.x+b.x};}
+function cMul(a,b){return{r:a.r*b.r-a.x*b.x,x:a.r*b.x+a.x*b.r};}
+function cDiv(a,b){var d=b.r*b.r+b.x*b.x;return{r:(a.r*b.r+a.x*b.x)/d,x:(a.x*b.r-a.r*b.x)/d};}
+function cAbs(a){return Math.sqrt(a.r*a.r+a.x*a.x);}
+function cShow(a){var s=(a.x>=0?' + j':' - j')+Math.abs(a.x).toFixed(3);return a.r.toFixed(3)+s;}
+function calcFault(){
+  var U=+document.getElementById('fl-u').value,Ssc=+document.getElementById('fl-ssc').value,xr=+document.getElementById('fl-xr').value,
+      len=+document.getElementById('fl-len').value,R1=+document.getElementById('fl-r1').value,X1=+document.getElementById('fl-x1').value,
+      R0=+document.getElementById('fl-r0').value,X0=+document.getElementById('fl-x0').value,Rf=+document.getElementById('fl-rf').value||0,
+      ft=document.getElementById('fl-type').value,neu=document.getElementById('fl-neu').value,box=document.getElementById('fl-rst');
+  var bk=document.getElementById('fl-break').value;var IkA=(bk===''||bk===null)?null:(+bk);
+  if(!(U>0&&Ssc>0&&xr>0&&len>=0)){box.innerHTML='<div class="err">请检查系统电压/短路容量/X-R/长度是否合法。</div>';return;}
+  function zr(zmag,xr){var r=zmag/Math.sqrt(1+xr*xr);return{r:r,x:r*xr};}
+  var Zs=zr(U*U/Ssc,xr);
+  function neutralZn(m){if(m==='solid')return{r:0,x:0};if(m==='none')return{r:1e9,x:0};if(m==='arc')return{r:0,x:(+document.getElementById('fl-xn').value||0)};return{r:(+document.getElementById('fl-rn').value||0),x:0};}
+  var Zn=neutralZn(neu);
+  var Ebase=U*1000/Math.sqrt(3),E={r:Ebase,x:0};
+  var a={r:-0.5,x:0.866025},a2={r:-0.5,x:-0.866025};
+  function fromSeq(I0,I1,I2){return{A:cAdd(cAdd(I0,I1),I2),B:cAdd(cAdd(I0,cMul(a2,I1)),cMul(a,I2)),C:cAdd(cAdd(I0,cMul(a,I1)),cMul(a2,I2))};}
+  var Z1=cAdd(Zs,{r:R1*len,x:X1*len}),Z2=Z1,Z0={r:Zs.r+R0*len+3*Zn.r,x:Zs.x+X0*len+3*Zn.x};
+  if(FAULT_MODE==='dual'){
+    var Ssc2=+document.getElementById('fl-ssc2').value,xr2=+document.getElementById('fl-xr2').value;
+    if(!(Ssc2>0&&xr2>0)){box.innerHTML='<div class="err">双电源模式需输入右侧短路容量与 X/R。</div>';return;}
+    var Zs2=zr(U*U/Ssc2,xr2);
+    var cInv=function(p){return cDiv({r:1,x:0},p);};
+    var b1=cAdd(Zs,{r:R1*len/2,x:X1*len/2}),b2=cAdd(Zs2,{r:R1*len/2,x:X1*len/2});
+    Z1=cDiv({r:1,x:0},cAdd(cInv(b1),cInv(b2)));Z2=Z1;
+    var z01=cAdd(Zs,{r:R0*len/2+3*Zn.r,x:X0*len/2+3*Zn.x}),z02=cAdd(Zs2,{r:R0*len/2+3*Zn.r,x:X0*len/2+3*Zn.x});
+    Z0=cDiv({r:1,x:0},cAdd(cInv(z01),cInv(z02)));
+  }
+  var Zf={r:Rf,x:0},I0,I1,I2,fname='';
+  if(ft==='3ph'){I1=cDiv(E,cAdd(Z1,Zf));I2={r:0,x:0};I0={r:0,x:0};fname='三相短路';var Zeq=cAdd(Z1,Zf);}
+  else if(ft==='ag'||ft==='bg'||ft==='cg'){var denom=cAdd(cAdd(Z1,Z2),cAdd(Z0,{r:3*Zf.r,x:3*Zf.x}));var If=cDiv(E,denom);I1=If;I2=If;I0=If;fname=ft==='ag'?'A相接地':ft==='bg'?'B相接地':'C相接地';var Zeq=cDiv({r:denom.r/3,x:denom.x/3},{r:1,x:0});}
+  else if(ft==='ab'||ft==='bc'||ft==='ca'){var den2=cAdd(Z1,cAdd(Z2,Zf));I1=cDiv(E,den2);I2={r:-I1.r,x:-I1.x};I0={r:0,x:0};fname=ft==='ab'?'AB两相短路':ft==='bc'?'BC两相短路':'CA两相短路';var Zeq=cDiv({r:den2.r/2,x:den2.x/2},{r:1,x:0});}
+  else{var z0g=cAdd(Z0,{r:3*Zf.r,x:3*Zf.x});var zpar=cDiv(cMul(Z2,z0g),cAdd(Z2,z0g));I1=cDiv(E,cAdd(Z1,zpar));var Vx=cAdd(E,cMul(I1,{r:-Z1.r,x:-Z1.x}));I2=cDiv({r:-Vx.r,x:-Vx.x},Z2);I0=cDiv({r:-Vx.r,x:-Vx.x},z0g);fname=ft==='abg'?'AB两相接地':ft==='bcg'?'BC两相接地':'CA两相接地';var Zeq=cAdd(Z1,zpar);}
+  var ph=fromSeq(I0,I1,I2);
+  var Ia=cAbs(ph.A)/1000,Ib=cAbs(ph.B)/1000,Ic=cAbs(ph.C)/1000;
+  var Imax=Math.max(Ia,Ib,Ic);
+  var Req=Math.max(Zeq.r,1e-6),Xeq=Math.abs(Zeq.x),tau=Xeq/(2*Math.PI*50*Req);
+  var breakerOk=null,okTxt='';
+  if(IkA!==null&&!isNaN(IkA)){breakerOk=IkA>=Imax;okTxt='<div class="rst-item" style="border-color:'+(breakerOk?'rgba(16,185,129,.4)':'rgba(239,68,68,.4)')+'"><div class="rst-lbl" style="color:'+(breakerOk?'var(--ok)':'var(--err)')+'">断路器校核</div><div class="rst-val" style="color:'+(breakerOk?'var(--ok)':'var(--err)')+'">'+(breakerOk?'合格':'开断不足')+'</div><div class="rst-unit">需≥'+Imax.toFixed(2)+'kA</div></div>';}
+  box.innerHTML='<div style="margin-bottom:10px"><span class="bdg '+(Imax>IkA&&IkA?'bdg-err':(IkA?'bdg-ok':'bdg-warn'))+'">'+fname+'</span></div>'+
+    '<div class="rst-grid" style="margin-bottom:10px">'+
+    rstItem('正序 Z1',cShow(Z1),'Ω')+rstItem('负序 Z2',cShow(Z2),'Ω')+rstItem('零序 Z0',cShow(Z0),'Ω')+'</div>'+
+    '<div class="rst-grid" style="margin-bottom:10px">'+
+    rstItem('I1',(cAbs(I1)/1000).toFixed(3),'kA')+rstItem('I2',(cAbs(I2)/1000).toFixed(3),'kA')+rstItem('I0',(cAbs(I0)/1000).toFixed(3),'kA')+'</div>'+
+    '<div class="rst-grid" style="margin-bottom:10px">'+
+    rstItem('A 相',Ia.toFixed(3),'kA')+rstItem('B 相',Ib.toFixed(3),'kA')+rstItem('C 相',Ic.toFixed(3),'kA')+rstItem('故障电流(有效)',Imax.toFixed(3),'kA')+'</div>'+
+    '<div class="rst-grid" style="margin-bottom:10px">'+rstItem('直流时间常数 τ',(tau*1000).toFixed(2),'ms')+rstItem('等效阻抗 R/X',Req.toFixed(3)+' / '+Xeq.toFixed(3),'Ω')+'</div>'+
+    (okTxt||'')+
+    '<div class="hint">模型：'+(FAULT_MODE==='dual'?'双电源并联（故障点取线路中点）':'单电源+线路末端')+'。中性点='+(neu==='solid'?'直接接地':neu==='none'?'不接地':neu==='arc'?'消弧线圈':'电阻')+'。已计入过渡电阻 Rf 与直流分量衰减。</div>';
+}
+window.faultMode=faultMode;window.calcFault=calcFault;window.flNeuChg=flNeuChg;
+
+/* ====================================================================== */
+/* 标幺值转换 + 设备参数校验                                              */
+/* ====================================================================== */
+var PU_MODE='line';
+function puMode(m){PU_MODE=m;
+  var tabs=document.getElementById('pu-tabs').children;
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('on',tabs[i].getAttribute('onclick').indexOf("'"+m+"'")>=0);
+  document.getElementById('pu-g-line').style.display=(m==='line')?'':'none';
+  document.getElementById('pu-g-t2').style.display=(m==='t2')?'':'none';
+  document.getElementById('pu-g-t3').style.display=(m==='t3')?'':'none';
+}
+function puWarn(list){if(!list.length)return '';return '<div class="hint" style="margin-top:10px;color:var(--warn)">⚠ 参数校验：<br>'+list.map(function(w){return '· '+w;}).join('<br>')+'</div>';}
+function calcPu(){
+  var Ub=+document.getElementById('pu-ub').value,Sb=+document.getElementById('pu-sb').value,box=document.getElementById('pu-rst');
+  if(!(Ub>0&&Sb>0)){box.innerHTML='<div class="err">请输入有效的基准电压与基准容量。</div>';return;}
+  var Zbase=Ub*Ub/Sb,Ybase=1/Zbase,warn=[];
+  var out='<div class="rst-grid" style="margin-bottom:10px">'+rstItem('基准阻抗 Zbase',Zbase.toFixed(4),'Ω')+rstItem('基准导纳 Ybase',Ybase.toFixed(6),'S')+'</div>';
+  if(PU_MODE==='line'){
+    var R1=+document.getElementById('pu-r1').value,X1=+document.getElementById('pu-x1').value,C1=+document.getElementById('pu-c1').value,len=+document.getElementById('pu-len').value;
+    if(!(R1>0&&X1>0&&C1>0&&len>0)){box.innerHTML='<div class="err">请输入有效的线路参数。</div>';return;}
+    var Rt=R1*len,Xt=X1*len,B1=2*Math.PI*50*(C1*1e-6),Bhalf=B1*len/2,Zc=Math.sqrt(X1/(2*Math.PI*50*C1*1e-6));
+    if(R1<0.004||R1>0.70)warn.push('R1 超出典型范围 0.004~0.70 Ω/km');
+    if(X1<0.18||X1>0.45)warn.push('X1 超出典型范围 0.18~0.45 Ω/km');
+    if(C1<0.004||C1>0.016)warn.push('C1 超出典型范围 0.004~0.016 μF/km');
+    if(X1/Math.max(R1,1e-6)<0.5)warn.push('X1/R1 < 0.5，疑似参数异常');
+    out+='<div class="rst-grid" style="margin-bottom:10px">'+rstItem('R 标幺',(Rt/Zbase).toFixed(5),'pu')+rstItem('X 标幺',(Xt/Zbase).toFixed(5),'pu')+rstItem('半充电 B/2 标幺',(Bhalf*Zbase).toFixed(5),'pu')+rstItem('波阻抗 Zc',Zc.toFixed(1),'Ω')+'</div>';
+  } else if(PU_MODE==='t2'){
+    var Pk=+document.getElementById('pu-pk').value,Uk=+document.getElementById('pu-uk').value,P0=+document.getElementById('pu-p0').value,I0=+document.getElementById('pu-i0').value,SN=+document.getElementById('pu-sn').value,UN=+document.getElementById('pu-un').value;
+    if(!(Pk>0&&Uk>0&&SN>0&&UN>0)){box.innerHTML='<div class="err">请输入有效的变压器参数。</div>';return;}
+    var Rk=Pk*UN*UN/(SN*SN*1000),Zk=(Uk/100)*UN*UN/SN,Xk=Math.sqrt(Math.max(0,Zk*Zk-Rk*Rk));
+    var G0=P0*1000/((UN*1000)*(UN*1000)),Y0=(I0/100)*SN/(UN*UN),B0=Math.sqrt(Math.max(0,Y0*Y0-G0*G0));
+    if(Uk<3.5||Uk>24)warn.push('Uk% 超出典型范围 3.5~24%');
+    if(I0<0.05||I0>8)warn.push('I0% 超出典型范围 0.05~8%');
+    if(Pk/SN<0.5||Pk/SN>15)warn.push('Pk/SN 超出典型范围 0.5~15%');
+    if(P0/SN<0.05||P0/SN>6)warn.push('P0/SN 超出典型范围 0.05~6%');
+    if(Rk>Zk)warn.push('Rk > Zk，阻抗三角形异常');
+    out+='<div class="rst-grid" style="margin-bottom:10px">'+rstItem('短路电阻 Rk 标幺',(Rk/Zbase).toFixed(5),'pu')+rstItem('短路电抗 Xk 标幺',(Xk/Zbase).toFixed(5),'pu')+rstItem('励磁电导 G0 标幺',(G0*Zbase).toFixed(6),'pu')+rstItem('励磁电纳 B0 标幺',(B0*Zbase).toFixed(6),'pu')+'</div>';
+  } else {
+    var Pkhm=+document.getElementById('pu-pkhm').value,Pkhl=+document.getElementById('pu-pkhl').value,Pkml=+document.getElementById('pu-pkml').value,
+        Ukhm=+document.getElementById('pu-ukhm').value,Ukhl=+document.getElementById('pu-ukhl').value,Ukml=+document.getElementById('pu-ukml').value,
+        P0b=+document.getElementById('pu-p0b').value,I0b=+document.getElementById('pu-i0b').value,SNh=+document.getElementById('pu-snh').value,UNh=+document.getElementById('pu-unh').value;
+    if(!(Pkhm>0&&Ukhl>0&&SNh>0&&UNh>0)){box.innerHTML='<div class="err">请输入有效的三绕组参数。</div>';return;}
+    var Pkh=(Pkhm+Pkhl-Pkml)/2,Pkm=(Pkhm+Pkml-Pkhl)/2,Pkl=(Pkhl+Pkml-Pkhm)/2;
+    var Ukh=(Ukhm+Ukhl-Ukml)/2,Ukm=(Ukhm+Ukml-Ukhl)/2,Ukl=(Ukhl+Ukml-Ukhm)/2;
+    function t3r(Pk,Uk){var Rk=Pk*UNh*UNh/(SNh*SNh*1000),Zk=(Uk/100)*UNh*UNh/SNh,Xk=Math.sqrt(Math.max(0,Zk*Zk-Rk*Rk));return{r:Rk/Zbase,x:Xk/Zbase};}
+    var rh=t3r(Pkh,Ukh),rm=t3r(Pkm,Ukm),rl=t3r(Pkl,Ukl);
+    if(Ukhm<4||Ukhm>25)warn.push('Uk_HM% 超出典型范围 4~25%');
+    if(I0b<0.05||I0b>6)warn.push('I0% 超出典型范围 0.05~6%');
+    if(Ukm<0)warn.push('分解后 Uk_M% 为负，参数可能不一致');
+    var G0=(P0b*1000)/((UNh*1000)*(UNh*1000)),Y0=(I0b/100)*SNh/(UNh*UNh),B0=Math.sqrt(Math.max(0,Y0*Y0-G0*G0));
+    out+='<div class="rst-grid" style="margin-bottom:10px">'+
+      rstItem('H 绕组 Rk/Xk',rh.r.toFixed(5)+' / '+rh.x.toFixed(5),'pu')+
+      rstItem('M 绕组 Rk/Xk',rm.r.toFixed(5)+' / '+rm.x.toFixed(5),'pu')+
+      rstItem('L 绕组 Rk/Xk',rl.r.toFixed(5)+' / '+rl.x.toFixed(5),'pu')+'</div>'+
+      '<div class="rst-grid" style="margin-bottom:10px">'+rstItem('励磁 G0/B0',(G0*Zbase).toFixed(6)+' / '+(B0*Zbase).toFixed(6),'pu')+rstItem('Uk% H/M/L',Ukh.toFixed(2)+'/'+Ukm.toFixed(2)+'/'+Ukl.toFixed(2),'%')+'</div>';
+  }
+  out+=puWarn(warn);
+  box.innerHTML=out;
+}
+window.puMode=puMode;window.calcPu=calcPu;
+
+/* ====================================================================== */
+/* 频率动态响应（数值积分摆动方程） + 电压/无功                           */
+/* ====================================================================== */
+var FDYN_MODE='freq';
+function fdynMode(m){FDYN_MODE=m;
+  var tabs=document.getElementById('fdyn-tabs').children;
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('on',tabs[i].getAttribute('onclick').indexOf("'"+m+"'")>=0);
+  document.getElementById('fdyn-g-freq').style.display=(m==='freq')?'':'none';
+  document.getElementById('fdyn-g-vq').style.display=(m==='vq')?'':'none';
+}
+function calcFreq(){
+  var S=+document.getElementById('fd-s').value,H=+document.getElementById('fd-h').value,D=+document.getElementById('fd-d').value,
+      dP=+document.getElementById('fd-dp').value,R=+document.getElementById('fd-r').value,Tg=+document.getElementById('fd-tg').value,
+      f0=+document.getElementById('fd-f0').value,T=+document.getElementById('fd-t').value,box=document.getElementById('fd-rst');
+  if(!(S>0&&H>0&&T>0&&f0>0)){box.innerHTML='<div class="err">请输入有效的系统容量/惯量/时长/频率。</div>';return;}
+  if(R<=0)R=1e-6;
+  var dt=0.05,n=Math.ceil(T/dt),f=0,pgov=0,tArr=[],fArr=[];
+  for(var i=0;i<=n;i++){var t=i*dt;
+    var dfdt=(-dP+pgov-D*f)*f0/(2*H*S);
+    tArr.push(t);fArr.push(f0+f);
+    var dpgdt=(1/Tg)*((1/R)*(-f/f0)*S-pgov);
+    f+=dfdt*dt;pgov+=dpgdt*dt;}
+  var rocof=(-dP+0-D*0)*f0/(2*H*S);
+  var nadir=Math.min.apply(null,fArr),nadirT=0;for(var j=0;j<fArr.length;j++)if(fArr[j]===nadir)nadirT=tArr[j];
+  var denom=(S/(R*f0))+D,fss=denom>0?(-dP/denom):(fArr[fArr.length-1]-f0);
+  var c=document.getElementById('fd-chart');if(!c._chart)c._chart=new CanvasChart(c.getContext('2d'),c);
+  c._chart.line(tArr,fArr,{refY:f0,refLabel:'f0='+f0,refColor:'rgba(154,167,184,.8)',color:'#FF8C42',xLabel:'t / s'});
+  box.innerHTML='<div class="rst-grid" style="margin-bottom:10px">'+
+    rstItem('初始 ROCOF',rocof.toFixed(4),'Hz/s')+rstItem('频率最低点',nadir.toFixed(3),'Hz')+
+    rstItem('最低点时刻',nadirT.toFixed(2),'s')+rstItem('稳态频降 Δf',fss.toFixed(3),'Hz')+'</div>'+
+    '<div class="hint">摆动方程数值积分（欧拉法，dt=0.05s）：2H·dΔf/dt = (-ΔP+Pgov-D·Δf)·f0/S；调速器 Pgov 按调差率 R、时间常数 Tg 一阶响应。ROCOF 仅由惯性决定；nadir 受调速器延迟影响低于稳态值。</div>';
+}
+function calcVQ(){
+  var Vs=+document.getElementById('vq-vs').value,Vr=+document.getElementById('vq-vr').value,X=+document.getElementById('vq-x').value,R=+document.getElementById('vq-r').value,
+      P=+document.getElementById('vq-p').value,Q=+document.getElementById('vq-q').value,Zc=+document.getElementById('vq-zc').value,U=+document.getElementById('vq-u').value,
+      box=document.getElementById('vq-rst');
+  if(!(Vs>0&&X>0&&U>0)){box.innerHTML='<div class="err">请输入有效的电压/阻抗/额定值。</div>';return;}
+  var Pnat=U*U/Zc;
+  var dV=(P*R+Q*X)/Vs;
+  var VrEst=Vs-dV;
+  var Pmax=Vs*Vr/X;
+  var Qneed=(P*X-(Vs-Vr)*Vr)/Math.max(R,1e-6);
+  var warn=[];
+  if(Math.abs(VrEst-Vr)>Math.max(1,Vr*0.03))warn.push('估算受端电压 '+VrEst.toFixed(1)+'kV 与给定 '+Vr+'kV 偏差较大，建议核查 R/X 与负荷。');
+  if(P>Pmax)warn.push('负荷有功 '+P+'MW 超过最大传输功率 '+Pmax.toFixed(0)+'MW，存在电压失稳风险。');
+  box.innerHTML='<div class="rst-grid" style="margin-bottom:10px">'+
+    rstItem('自然功率 P_nat',Pnat.toFixed(1),'MW')+rstItem('电压降落 ΔV',dV.toFixed(2),'kV')+
+    rstItem('估算受端电压',VrEst.toFixed(1),'kV')+rstItem('最大传输功率',Pmax.toFixed(0),'MW')+'</div>'+
+    '<div class="rst-grid" style="margin-bottom:10px">'+rstItem('维持 Vr 需无功 Q',Qneed.toFixed(1),'MVar')+rstItem('给定负荷无功 Q',Q,'MVar')+'</div>'+
+    (warn.length?('<div class="hint" style="color:var(--warn)">⚠ '+warn.join('<br>')+'</div>'):'')+
+    '<div class="hint">自然功率 P_nat=U²/Zc（线路无损耗传输功率）。电压降落 ΔV≈(P·R+Q·X)/Vs。最大传输功率 P_max=Vs·Vr/X（忽略电阻）。</div>';
+}
+window.fdynMode=fdynMode;window.calcFreq=calcFreq;window.calcVQ=calcVQ;
+
+/* ====================================================================== */
+/* COMTRADE 波形分析                                                      */
+/* ====================================================================== */
+var CT={ready:false,analog:[],fs:50,nA:0,info:''};
+function ctClear(){CT={ready:false,analog:[],fs:50,nA:0,info:''};document.getElementById('ct-rst').innerHTML='<div class="rst-empty">等待文件</div>';document.getElementById('ct-info').textContent='选择 .cfg 与 .dat 文件后点击「解析并分析」。';var cv=document.getElementById('ct-wave');if(cv)cv.style.display='none';}
+function ctfRead(file){return new Promise(function(res,rej){if(!file){rej('no file');return;}var rd=new FileReader();rd.onload=function(){res(rd.result);};rd.onerror=function(){rej(rd.error);};if(/\.cfg$/i.test(file.name))rd.readAsText(file);else rd.readAsArrayBuffer(file);});}
+function ctParse(){
+  var cfgF=document.getElementById('ct-cfg').files[0],datF=document.getElementById('ct-dat').files[0],box=document.getElementById('ct-rst');
+  if(!cfgF||!datF){box.innerHTML='<div class="err">请同时选择 .cfg 与 .dat 文件。</div>';return;}
+  document.getElementById('ct-info').textContent='正在解析…';
+  Promise.all([ctfRead(cfgF),ctfRead(datF)]).then(function(r){
+    var cfgTxt=typeof r[0]==='string'?r[0]:'',datBuf=r[1];
+    var info=ctParseCfg(cfgTxt);CT.info=info;
+    ctParseDat(datBuf,info);
+    ctAnalyze(box);
+  }).catch(function(e){box.innerHTML='<div class="err">解析失败：'+(e&&e.message?e.message:e)+'</div>';document.getElementById('ct-info').textContent='解析失败。';});
+}
+function ctParseCfg(txt){
+  var lines=txt.split(/\r?\n/).map(function(l){return l.trim();}).filter(function(l){return l.length;});
+  var station=lines[0]||'',recdev=lines[1]||'',cnt=lines[2]||'',idx=3;
+  if(/^\s*(1991|1999|2013|\d{4})\s*$/.test(lines[2])&&lines[3]&&/^\s*\d/.test(lines[3])){cnt=lines[3];idx=4;}
+  else if(lines[1]&&/^\s*\d+/.test(lines[1])&&lines[2]&&lines[2].split(',').length>=9){cnt=lines[1];idx=2;}
+  var nA,nD;var cm=cnt.match(/^\s*(\d+)\s*,\s*(\d+)/);
+  if(cm){nA=+cm[1];nD=+cm[2];}else{var tot=parseInt(cnt,10);nA=null;nD=tot;}
+  var analog=[],i=idx;
+  while(i<lines.length){
+    var parts=lines[i].split(',');
+    if(parts.length>=9&&!isNaN(parseFloat(parts[4]))&&!isNaN(parseFloat(parts[5]))){analog.push({name:(parts[1]||'').trim(),unit:(parts[3]||'').trim(),phase:(parts[2]||'').trim(),a:parseFloat(parts[4]),b:parseFloat(parts[5]),max:(+parts[7]||32767),min:(+parts[6]||-32768)});i++;}
+    else if(/^\s*[\d.]+\s*(,\s*[\d.]+)?\s*$/.test(lines[i])&&/[\d.]/.test(lines[i])){break;}
+    else{i++;}
+  }
+  if(nA===null)nA=analog.length;else analog=analog.slice(0,nA);
+  var sampLine=lines[i]||'';var sp=sampLine.split(',');
+  var fs;if(sp.length>=2&&!isNaN(parseFloat(sp[0]))&&!isNaN(parseFloat(sp[1]))){fs=parseFloat(sp[0])*parseFloat(sp[1]);}else{fs=parseFloat(sp[0])||50;}
+  var dtype=(lines[i+3]||'ASCII').toUpperCase();
+  CT.fs=fs;CT.nA=analog.length;CT.analog=analog;CT.dtype=dtype;
+  return '站名：'+station+'｜装置：'+recdev+'｜模拟量通道：'+analog.length+'｜采样率：'+fs+'Hz｜数据格式：'+dtype;
+}
+function ctParseDat(buf,info){
+  var dv=new DataView(buf),nA=CT.nA,fs=CT.fs,analog=CT.analog;
+  for(var k=0;k<nA;k++){analog[k].data=[];}
+  var n=Math.floor(buf.byteLength/2);
+  if(CT.dtype.indexOf('BINARY32')>=0){
+    var rec=4+4+nA*4,total=Math.floor(buf.byteLength/rec);
+    for(var s=0;s<total;s++){var o=s*rec;for(var c=0;c<nA;c++){var v=dv.getInt32(o+8+c*4,true);var ch=analog[c];ch.data.push(ch.a*v+ch.b);}}
+  } else if(CT.dtype.indexOf('BINARY')>=0){
+    var rec2=4+2+nA*2,total2=Math.floor(buf.byteLength/rec2);
+    for(var s2=0;s2<total2;s2++){var o2=s2*rec2;for(var c2=0;c2<nA;c2++){var v2=dv.getInt16(o2+4+c2*2,true);var ch2=analog[c2];ch2.data.push(ch2.a*v2+ch2.b);}}
+  } else {
+    var txt=new TextDecoder('utf-8').decode(new Uint8Array(buf));var rows=txt.split(/\r?\n/);
+    for(var ri=0;ri<rows.length;ri++){var cols=rows[ri].trim().split(/[,\s]+/);if(cols.length<nA+1)continue;for(var c3=0;c3<nA&&c3<cols.length-1;c3++){var raw=parseFloat(cols[c3+1]);if(isNaN(raw))continue;var ch3=analog[c3];ch3.data.push(ch3.a*raw+ch3.b);}}
+  }
+  CT.ready=true;
+}
+function ctDft(xs,fs,f0){var N=xs.length,sumR=0,sumI=0,w=2*Math.PI*f0/fs;
+  for(var n=0;n<N;n++){sumR+=xs[n]*Math.cos(w*n);sumI+=xs[n]*Math.sin(w*n);}
+  var re=sumR/N*2,im=-sumI/N*2;return{mag:Math.sqrt(re*re+im*im),ang:Math.atan2(im,re)*180/Math.PI};}
+function ctAnalyze(box){
+  if(!CT.ready){box.innerHTML='<div class="err">数据未解析。</div>';return;}
+  var chSel=document.getElementById('ct-ch').value.split(/[,\s]+/).map(function(s){return parseInt(s,10);}).filter(function(n){return n>=1&&n<=CT.nA;});
+  var t0ms=+document.getElementById('ct-t0').value||0;
+  if(!chSel.length){box.innerHTML='<div class="err">请填写有效的分析通道序号。</div>';return;}
+  var fs=CT.fs,f0=50,out='<div class="hint" style="margin-bottom:8px">'+CT.info+'</div>';
+  out+='<div class="tbl-scroll"><table class="tbl"><thead><tr><th>通道</th><th>名称</th><th>单位</th><th>RMS</th><th>基波幅值</th><th>相角</th></tr></thead><tbody>';
+  var phasors=[];
+  chSel.forEach(function(cn){var ch=CT.analog[cn-1];if(!ch||!ch.data.length)return;var d=ch.data;var start=Math.max(0,Math.floor(t0ms/1000*fs));var win=d.slice(start);
+    var t=0,sq=0;for(var i=0;i<win.length;i++){sq+=win[i]*win[i];t++;}var rms=Math.sqrt(sq/t);
+    var ph=ctDft(win,fs,f0);phasors.push(ph);
+    out+='<tr><td>'+(cn)+'</td><td>'+(ch.name||'-')+'</td><td>'+(ch.unit||'')+'</td><td>'+rms.toFixed(3)+'</td><td>'+ph.mag.toFixed(3)+'</td><td>'+ph.ang.toFixed(1)+'°</td></tr>';
+  });
+  out+='</tbody></table></div>';
+  if(phasors.length===3){
+    var p=phasors;var a={r:-0.5,x:0.866025},a2={r:-0.5,x:-0.866025};
+    function cA(P){return{r:P.mag*Math.cos(P.ang*Math.PI/180),x:P.mag*Math.sin(P.ang*Math.PI/180)};}
+    function cDivN(z,n){return{r:z.r/n,x:z.x/n};}
+    var Pa=cA(p[0]),Pb=cA(p[1]),Pc=cA(p[2]);
+    var U1=cDivN(cAdd(cAdd(Pa,cMul(a,Pb)),cMul(a2,Pc)),3),U2=cDivN(cAdd(cAdd(Pa,cMul(a2,Pb)),cMul(a,Pc)),3),U0=cDivN(cAdd(cAdd(Pa,Pb),Pc),3);
+    var U1m=cAbs(U1),U2m=cAbs(U2),U0m=cAbs(U0),eps=U1m>0?U2m/U1m*100:0;
+    out+='<div class="card-title" style="margin:10px 0 4px">序分量（按通道 1/2/3 = A/B/C）</div>';
+    out+='<div class="rst-grid" style="margin-bottom:10px">'+rstItem('正序 U1',U1m.toFixed(3),(CT.analog[chSel[0]-1].unit||''))+rstItem('负序 U2',U2m.toFixed(3),'')+rstItem('零序 U0',U0m.toFixed(3),'')+rstItem('不平衡度 ε',eps.toFixed(2),'%')+'</div>';
+    var firstCh=CT.analog[chSel[0]-1];var fwin=firstCh.data.slice(Math.max(0,Math.floor(t0ms/1000*fs)));
+    var harm=[],sumSq=0;for(var h=2;h<=10;h++){var hp=ctDft(fwin,fs,f0*h);harm.push(hp.mag);sumSq+=hp.mag*hp.mag;}
+    var thd=U1m>0?Math.sqrt(sumSq)/U1m*100:0;
+    out+='<div class="card-title" style="margin:10px 0 4px">THD 与谐波（基波='+U1m.toFixed(3)+'）</div>';
+    out+='<div class="rst-grid" style="margin-bottom:6px">'+rstItem('谐波畸变率 THD',thd.toFixed(2),'%')+rstItem('判定(≤5%)',thd<=5?'合格':'偏高','')+'</div>';
+    out+='<div class="thd-list">'+harm.map(function(m,i){var pct=U1m>0?m/U1m*100:0;return '<div class="thd-row"><span class="thd-ord">H'+(i+2)+'</span><span class="thd-val">'+m.toFixed(3)+'</span><span class="thd-bar"><span class="thd-bar-f" style="width:'+Math.min(100,pct).toFixed(1)+'%"></span></span><span class="thd-pct">'+pct.toFixed(1)+'%</span></div>';}).join('')+'</div>';
+  }
+  box.innerHTML=out;
+  var cv=document.getElementById('ct-wave');var ch0=CT.analog[chSel[0]-1];
+  if(cv&&ch0&&ch0.data.length){cv.style.display='block';var d=ch0.data.slice(0,Math.min(400,ch0.data.length));if(!cv._chart)cv._chart=new CanvasChart(cv.getContext('2d'),cv);cv._chart.line(d.map(function(_,i){return i;}),d,{color:'#38BDF8',xLabel:ch0.name||'sample'});}
+}
+window.ctParse=ctParse;window.ctClear=ctClear;window.ctDft=ctDft;window.ctParseCfg=ctParseCfg;window.ctParseDat=ctParseDat;window.ctAnalyze=ctAnalyze;window.CT=CT;
+
+/* ====================================================================== */
 /* 公式速算器 Formula Lab                                                  */
 /* ====================================================================== */
 var LAB=[
@@ -4531,6 +4803,19 @@ CanvasChart.prototype.radar=function(labels,vals,color,prev,target){var c2d=this
     if(prev)poly(prev,'#38BDF8',0.12);
     if(target)poly(target,'#38BDF8',0.0,[4,3]);
     poly(vals,color,0.18);};this._drawFn();};
+CanvasChart.prototype.line=function(xs,ys,opts){opts=opts||{};var c2d=this.ctx,c=this.canvas,W=c.width,H=c.height,pad={t:16,r:18,b:34,l:48},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  var xMin=xs[0],xMax=xs[xs.length-1];var yMin=Math.min.apply(null,ys),yMax=Math.max.apply(null,ys);
+  if(opts.refY!==undefined){yMin=Math.min(yMin,opts.refY);yMax=Math.max(yMax,opts.refY);}
+  var yR=yMax-yMin||1;yMin-=yR*0.08;yMax+=yR*0.08;yR=yMax-yMin;var xR=xMax-xMin||1;
+  this._drawFn=function(){c2d.clearRect(0,0,W,H);
+    c2d.strokeStyle='rgba(35,48,63,.7)';c2d.lineWidth=1;
+    for(var i=0;i<=4;i++){var y=pad.t+cH*i/4;c2d.beginPath();c2d.moveTo(pad.l,y);c2d.lineTo(pad.l+cW,y);c2d.stroke();c2d.fillStyle='rgba(154,167,184,.7)';c2d.font='9px Consolas,monospace';c2d.textAlign='right';c2d.fillText((yMax-yR*i/4).toFixed(2),pad.l-4,y+3);}
+    for(var j=0;j<=5;j++){var x=pad.l+cW*j/5;c2d.fillStyle='rgba(154,167,184,.7)';c2d.textAlign='center';c2d.fillText((xMin+xR*j/5).toFixed(0),x,H-8);}
+    if(opts.refY!==undefined){var ry=pad.t+cH*(1-(opts.refY-yMin)/yR);c2d.strokeStyle=opts.refColor||'rgba(255,176,32,.8)';c2d.setLineDash([4,3]);c2d.beginPath();c2d.moveTo(pad.l,ry);c2d.lineTo(pad.l+cW,ry);c2d.stroke();c2d.setLineDash([]);if(opts.refLabel){c2d.fillStyle=opts.refColor||'rgba(255,176,32,.9)';c2d.textAlign='left';c2d.fillText(opts.refLabel,pad.l+4,ry-4);}}
+    c2d.strokeStyle=opts.color||'#FF8C42';c2d.lineWidth=2;c2d.beginPath();
+    for(var k=0;k<xs.length;k++){var px=pad.l+cW*(xs[k]-xMin)/xR,py=pad.t+cH*(1-(ys[k]-yMin)/yR);if(k===0)c2d.moveTo(px,py);else c2d.lineTo(px,py);}
+    c2d.stroke();
+    c2d.fillStyle='#9AA7B8';c2d.font='9px system-ui,sans-serif';c2d.textAlign='left';c2d.fillText(opts.xLabel||'t / s',pad.l+cW-46,H-8);};this._drawFn();};
 
 /* 图表 resize 总控 */
 var CHART_IDS=['pv','pf','qu','sa','pc','soc','sym','radar'];
