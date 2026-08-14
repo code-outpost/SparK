@@ -262,7 +262,6 @@ npx serve .
   - **序分量**：正序/负序/零序 + 三相不平衡度 `ε`。
   - **THD** 总谐波畸变率。
   - 波形曲线绘制于 `ct-wave` 画布。
-- **参考**：开源 `power_tool/comtrade.py` 的录波解析与特征提取。
 
 #### 频率动态（`fdyn`）★新增
 
@@ -364,8 +363,6 @@ npx serve .
 
 ## 8. 参考与致谢
 
-- 短路电流、标幺值、COMTRADE 三大计算模块的公式与解析逻辑，参考开源项目
-  **[zoudehupowersystem/power_tool](https://github.com/zoudehupowersystem/power_tool)**（`faults.py` / `params.py` / `comtrade.py`），并按 SparK 的交互与可视化需求重新实现。
 - 协议速查内容参考 IEC 60870-5-104、Modbus、SunSpec 公开规范。
 - 谐波/不平衡度限值参考 GB/T 14549、IEEE 519。
 
@@ -408,4 +405,4 @@ SparK 是**测试辅助与学习工具**，计算结果供工程估算、方案�
 
 ---
 
-© SparK · 数字能源测试效率工具箱 · 本地离线版
+© SparK · 数字能源电力测试效率工具箱 
