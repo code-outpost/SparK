@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>SparK · 数字能源测试效率工具箱</title>
 <style>
 *,*:before,*:after{box-sizing:border-box;margin:0;padding:0}
@@ -50,7 +53,16 @@ textarea{font-family:var(--mono);resize:vertical}
 .hdr-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx2)}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .dot-on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
-.hdr-clock{font-family:var(--mono);font-size:11px;color:var(--tx3)}
+.hdr-clock{font-family:var(--mono);font-size:11px;color:var(--tx3);white-space:nowrap}
+.hdr-weather{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx2);background:var(--bg3);border:1px solid var(--bd);border-radius:20px;padding:3px 10px;white-space:nowrap;transition:opacity .2s;cursor:pointer}
+.hdr-weather:hover{border-color:var(--acc);color:var(--acc)}
+.weather-icon{font-size:15px;line-height:1;flex-shrink:0}
+.weather-main{display:flex;flex-direction:column;line-height:1.25;text-align:left}
+.weather-line1{font-family:var(--mono);font-size:11px;color:var(--tx)}
+.weather-line2{font-size:10px;color:var(--tx3)}
+.weather-text{font-family:var(--mono)}
+.weather-city{color:var(--tx3);max-width:70px;overflow:hidden;text-overflow:ellipsis}
+.weather-wind{color:var(--tx3);font-size:10px}
 .hamburger{display:none;flex-direction:column;justify-content:space-between;width:22px;height:17px;background:none;border:none;cursor:pointer;padding:0;flex-shrink:0;margin-right:8px}
 .hamburger span{display:block;width:100%;height:2px;background:var(--tx);border-radius:2px;transition:all .25s}
 .hamburger.on span:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
@@ -269,7 +281,7 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
 .lbl-txt{font-size:calc(10px*var(--fs))}.lbl-unit{font-size:calc(9px*var(--fs))}.fm{font-size:calc(11px*var(--fs))}.hint{font-size:calc(11px*var(--fs))}
 .tbl{font-size:calc(11px*var(--fs))}.tbl input,.tbl textarea{font-size:calc(10px*var(--fs))}.btn{font-size:calc(11px*var(--fs))}.btn-sm{font-size:calc(10px*var(--fs))}
 .rst-empty{font-size:calc(12px*var(--fs))}/* 导航项字体大小已删除 */.siyao .name{font-size:calc(10px*var(--fs))}.siyao .val{font-size:calc(18px*var(--fs))}
-.hdr-title{font-size:calc(15px*var(--fs))}.hdr-sub{font-size:calc(9px*var(--fs))}.hdr-status,.hdr-clock{font-size:calc(11px*var(--fs))}
+.hdr-title{font-size:calc(15px*var(--fs))}.hdr-sub{font-size:calc(9px*var(--fs))}.hdr-status,.hdr-clock{font-size:calc(11px*var(--fs))}.hdr-weather{font-size:calc(11px*var(--fs))}
 .bits{font-size:calc(12px*var(--fs))}.res-row .k,.res-row .v{font-size:calc(11px*var(--fs))}input,select,textarea{font-size:calc(11px*var(--fs))}
 /* ===== 升级：仪表盘 / 动效 / 玻璃质感 ===== */
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
@@ -470,14 +482,17 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
 .r-row input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3)}
 .r-chk{display:flex;align-items:center;gap:7px;font-size:calc(12px*var(--fs));color:var(--tx2);margin:8px 0;cursor:pointer}
 .r-preview-wrap{background:#fff;border:1px solid var(--bd);border-radius:10px;overflow:auto;min-height:74vh}
-.r-preview{width:100%;height:74vh;border:none;display:block;background:#fff;min-width:100%}
+/* 预览固定按 794px（A4 设计宽）渲染，再用 transform 缩放到面板宽度 —— 这样预览与导出 PDF 走同一套断点，
+   不再因面板窄而触发 @media(max-width:760px) 导致布局/间距/分栏与导出的 PDF 不一致。 */
+.r-preview-inner{position:relative;overflow:hidden;transform-origin:top left;margin:0 auto}
+.r-preview{width:794px;height:1123px;border:none;display:block;background:#fff;transform-origin:top left}
 .r-photo-in{width:100%;margin-top:6px;font-size:calc(11px*var(--fs));color:var(--tx);background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:6px 8px;box-sizing:border-box}
 @media(max-width:900px){
   .r-editor-body{grid-template-columns:1fr}
   .r-editor-body.r-show-prev{display:flex;flex-direction:column;height:calc(100vh - 118px);min-height:300px}
   .r-form-wrap{max-height:none}
   .r-preview-wrap{flex:1;min-height:0;height:auto;background:#fff;border:none;border-radius:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:10px 0}
-  .r-preview{height:100%;min-height:0;width:100%;background:transparent;border:none;box-shadow:none}
+  .r-preview{background:transparent;border:none;box-shadow:none}
   .r-mtoggle{display:inline-flex}
   .r-editor-body.r-show-form .r-preview-wrap{display:none}
   .r-editor-body.r-show-prev .r-form-wrap{display:none}
@@ -532,12 +547,12 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
   <div class="intro-logo"><span class="cube">⚡</span><span>SparK</span></div>
   <div class="intro-text">
     <div class="it-hi"><b>SparK</b><b class="hi-accent">数字能源测试工具箱</b></div>
-    <p class="it-sub">一站式离线测试效率工具。光伏储能并网计算、一次调频 / AGC / QU 曲线验证、Modbus / IEC 104 协议速查、SPPC / 数采场景模板、新能源岗位 JD 库与能力雷达——零网络依赖，开箱即用。</p>
+    <p class="it-sub">一站式离线测试效率工具。光伏储能并网计算、一次调频 / AGC / QU 曲线验证、通信速查、新能源岗位 JD 库与能力雷达——零网络依赖，开箱即用。</p>
     <button class="it-cta" id="introCta">开始探索 ↓</button>
   </div>
   <div class="intro-card">
     <div class="ic-title">你好，欢迎来访 ⚡</div>
-    <div class="ic-sub">这里收录了我在数字能源测试中提炼的计算公式、协议速查、场景模板与新能源岗位 JD 库。滚动或点击“开始探索”即可进入工作台。</div>
+    <div class="ic-sub">这里收录了我在数字能源测试中提炼的计算公式、通信速查与新能源岗位 JD 库。滚动或点击“开始探索”即可进入工作台。</div>
     <div class="ic-btns">
       <a class="ic-btn primary" href="javascript:void(0)" onclick="gotoApp&&gotoApp()">进入工作台 →</a>
       <a class="ic-btn" href="mailto:2931424924@qq.com">联系我 ✉</a>
@@ -566,6 +581,7 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
     </div>
   </div>
   <div class="hdr-r">
+    <div class="hdr-weather" id="weather" title="实时天气" onclick="goWeatherSet()"><span class="weather-text">--</span></div>
     <div class="hdr-clock" id="clk">--:--:--</div>
   </div>
 </div>
@@ -638,20 +654,6 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h12M8 2v12" stroke-linecap="round"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>通信速查</div>
         <div class="nav-item" data-sect="lab" onclick="nav(this,'lab')">
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2v4L3 13h10L10 6V2M6 2h4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10h5" stroke-linecap="round"/></svg>公式速算</div>
-        <div class="nav-item" data-sect="proto" onclick="nav(this,'proto')">
-          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12M6 6v7M10 6v7" stroke-linecap="round"/></svg>协议速查</div>
-      </nav>
-      <div class="nav-sec">测试场景库</div>
-      <nav>
-        <div class="nav-item" data-sect="scenario" onclick="nav(this,'scenario')">
-          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v10H3z"/><path d="M6 6l3 2-3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>SPPC/数采场景</div>
-      </nav>
-      <div class="nav-sec">报告与知识</div>
-      <nav>
-        <div class="nav-item" data-sect="report" onclick="nav(this,'report')">
-          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v12H4z"/><path d="M6 5h4M6 8h4M6 11h2" stroke-linecap="round"/></svg>报告模板</div>
-        <div class="nav-item" data-sect="knowledge" onclick="nav(this,'knowledge')">
-          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h6"/></svg>知识库</div>
       </nav>
       <div class="nav-sec">系统</div>
       <nav>
@@ -677,9 +679,9 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
         <div class="hero-inner">
           <div class="hero-badge rise" style="--d:.05s">数字能源 · 测试效率 · 求职加速器</div>
           <h1 class="hero-title rise" style="--d:.18s">SparK</h1>
-          <p class="hero-sub rise" style="--d:.32s">数字能源 · 数采（子阵级）/ SPPC（站级）测试工程师的一体化离线工具箱。计算内核、协议速查、场景模板、原理知识库、简历与新能源岗位 JD 库——随手即查，零网络依赖。</p>
+          <p class="hero-sub rise" style="--d:.32s">数字能源测试工程师的一体化离线工具箱。计算内核、通信速查、简历与新能源岗位 JD 库——随手即查，零网络依赖。</p>
           <div class="stat-grid rise" style="--d:.46s">
-            <div class="stat-card"><div class="stat-num">23</div><div class="stat-lbl">知识条目</div></div>
+            <div class="stat-card"><div class="stat-num">9</div><div class="stat-lbl">主题配色</div></div>
             <div class="stat-card"><div class="stat-num">78</div><div class="stat-lbl">岗位JD</div></div>
             <div class="stat-card"><div class="stat-num">11</div><div class="stat-lbl">计算模块</div></div>
             <div class="stat-card"><div class="stat-num">∞</div><div class="stat-lbl">离线即用</div></div>
@@ -688,8 +690,6 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
             <div class="chip" onclick="nav(this,'pf')">一次调频</div>
             <div class="chip" onclick="nav(this,'qu')">QU 曲线</div>
             <div class="chip" onclick="nav(this,'comm')">通信速查</div>
-            <div class="chip" onclick="nav(this,'scenario')">测试场景</div>
-            <div class="chip" onclick="nav(this,'knowledge')">知识库</div>
             <div class="chip" onclick="nav(this,'jd')">岗位JD库</div>
             <div class="chip" onclick="nav(this,'resume')">简历生成</div>
             <div class="chip" onclick="nav(this,'lab')">公式速算</div>
@@ -699,11 +699,11 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
       <div class="panel-grid" style="margin-top:14px">
         <div class="card">
           <div class="card-title"><div class="dot"></div>快速上手</div>
-          <div class="step-c"><b>① 计算</b>：光伏、一次调频、QU、储能分配、功率、站级 SOC、对称分量、四遥、进制、浮点——左侧「测试效率计算」。<br><b>② 速查</b>：Modbus / IEC104 功能码、寄存器映射、协议速查表。<br><b>③ 场景</b>：SPPC / 数采 多场景测试模板，可勾选执行。<br><b>④ 知识</b>：原理 + 公式 + 测试要点，覆盖频率 / 调度 / 通信 / 光储。<br><b>⑤ 求职</b>：简历 STAR 要点、自我介绍、能力雷达图。</div>
+          <div class="step-c"><b>① 计算</b>：光伏、一次调频、QU、储能分配、功率、站级 SOC、对称分量、四遥、进制、浮点——左侧「测试效率计算」。<br><b>② 速查</b>：Modbus / IEC104 功能码、寄存器映射、通信速查表。<br><b>③ 求职</b>：简历 STAR 要点、岗位 JD 库、能力雷达图。</div>
         </div>
         <div class="card">
           <div class="card-title"><div class="dot"></div>公式速算器亮点</div>
-          <div class="step-c">把知识库里的核心公式变成可交互计算器：一次调频下垂 ΔP、ACE 区域控制偏差、阻尼比 ζ、虚拟惯量支撑功率、QU 无功——输入参数即时出结果，验证你对公式的理解。</div>
+          <div class="step-c">把日常测试中的核心公式变成可交互计算器：一次调频下垂 ΔP、ACE 区域控制偏差、阻尼比 ζ、虚拟惯量支撑功率、QU 无功——输入参数即时出结果，验证你对公式的理解。</div>
           <div style="margin-top:10px"><button class="btn btn-pri btn-sm" onclick="nav(this,'lab')">打开公式速算 →</button></div>
         </div>
       </div>
@@ -794,7 +794,9 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
             <div class="r-form" id="r-form"></div>
           </div>
           <div class="r-preview-wrap">
-            <iframe id="r-preview" class="r-preview" title="简历实时预览"></iframe>
+            <div class="r-preview-inner" id="r-preview-inner">
+              <iframe id="r-preview" class="r-preview" title="简历实时预览"></iframe>
+            </div>
           </div>
         </div>
       </div>
@@ -1606,16 +1608,17 @@ Model 101/103 单相/三相逆变器
           <div class="set-row"><div><div class="set-name">背景主题</div><div class="set-desc">切换背景配色（9 种），与强调色独立生效</div></div><div class="swatches" id="themeBtns"></div></div>
           <div class="set-row"><div><div class="set-name">自定义颜色</div><div class="set-desc">点取色器精确指定主题色</div></div><input type="color" id="accPicker" value="#FF8C42" oninput="setAcc(this.value,true)" onchange="setAcc(this.value,true)"></div>
           <div class="set-row"><div><div class="set-name">字体大小</div><div class="set-desc">调整界面整体字号</div></div><div style="display:flex;align-items:center;gap:10px"><input type="range" id="fsRange" min="0.8" max="1.4" step="0.05" value="1" oninput="setFont(this.value)"><span class="fs-val" id="fsVal">100%</span></div></div>
+          <div class="set-row"><div><div class="set-name">和风天气 API Key</div><div class="set-desc">输入你自己的和风天气 Web API 密钥，留空则不显示实时天气</div></div><div style="display:flex;align-items:center;gap:8px;flex:1;max-width:360px"><input type="text" id="weatherKey" placeholder="在和风天气控制台获取 Web API Key" style="font-family:var(--mono);font-size:11px;flex:1" onchange="setWeatherKey(this.value)"><button class="btn btn-pri btn-sm" onclick="setWeatherKey(document.getElementById('weatherKey').value);initWeather()">保存</button></div></div>
           <div class="sep"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" onclick="resetSettings()">恢复默认设置</button></div>
           <div class="hint">设置自动保存到本地浏览器（localStorage），下次打开仍生效。</div>
         </div>
         <div class="card">
           <div class="card-title"><div class="dot"></div>关于</div>
-          <div class="about-d" style="margin-top:6px">SparK · 数字能源测试效率工具箱 v1.0<br><br>面向数字能源控制器测试工程师的本地工具箱：求职加速器 + 测试效率计算 + 场景库 + 报告/知识。全部计算在浏览器本地完成，数据不出本机。</div>
+          <div class="about-d" style="margin-top:6px">SparK · 数字能源测试效率工具箱 v1.0<br><br>面向数字能源控制器测试工程师的本地工具箱：求职加速器 + 测试效率计算。全部计算在浏览器本地完成，数据不出本机。</div>
           <div class="sep"></div>
           <div class="card-title"><div class="dot"></div>模块清单</div>
-          <div class="about-d" style="margin-top:6px">求职：简历生成 / 岗位JD库（能力提炼）/ 能力雷达<br>计算：光伏 / 一次调频 / QU / 储能分配 / 功率 / 站级SOC / 对称分量 / 四遥 / 进制 / 浮点 / 通信速查<br>场景：SPPC·数采测试场景库<br>报告/知识：报告模板 / 协议·方法论知识库</div>
+          <div class="about-d" style="margin-top:6px">求职：简历生成 / 岗位JD库（能力提炼）/ 能力雷达<br>计算：光伏 / 一次调频 / QU / 储能分配 / 功率 / 站级SOC / 对称分量 / 四遥 / 进制 / 浮点 / 通信速查 / 公式速算</div>
         </div>
       </div>
     </div>
@@ -1628,18 +1631,18 @@ Model 101/103 单相/三相逆变器
       </div>
       <div class="about-list">
         <div class="about-item"><div class="about-badge">求</div><div class="about-body"><div class="about-t">求职加速器</div><div class="about-d">简历/自我介绍生成器（STAR 化）、新能源岗位 JD 库（自动提炼所需协议/软件/能力）、能力雷达图，帮你系统梳理经历、精准备战面试。</div></div></div>
-        <div class="about-item"><div class="about-badge">算</div><div class="about-body"><div class="about-t">测试效率计算</div><div class="about-d">光伏组串/容量、一次调频、QU、储能分配、功率、站级SOC、对称分量、四遥点位、进制/浮点、通信速查——直接复用电力系统计算器验证内核。</div></div></div>
-        <div class="about-item"><div class="about-badge">景</div><div class="about-body"><div class="about-t">测试场景库</div><div class="about-d">SPPC 站级与数采(子阵级) 预设场景：纯光/纯储/光储/工商业，含前置条件→步骤→预期→记录表，一键导出。</div></div></div>
-        <div class="about-item"><div class="about-badge">知</div><div class="about-body"><div class="about-t">报告与知识</div><div class="about-d">测试报告模板自动生成；协议（IEC 61850 / Modbus / SunSpec）与测试方法论（等价类/边界值/错误推测/探索性）速查卡片。</div></div></div>
+        <div class="about-item"><div class="about-badge">算</div><div class="about-body"><div class="about-t">测试效率计算</div><div class="about-d">光伏组串/容量、一次调频、QU、储能分配、功率、站级SOC、对称分量、四遥点位、进制/浮点、通信速查、公式速算——直接复用电力系统计算器验证内核。</div></div></div>
       </div>
     </div>
 
   </div><!-- /main -->
 </div><!-- /layout -->
 
+</div><!-- /appLayout -->
+
 <script src="three.min.js"></script>
 <script src="jl/templates.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=20260823-9"></script>
 <script>
 /* 启动页 + 自我介绍页切换 */
 (function(){
