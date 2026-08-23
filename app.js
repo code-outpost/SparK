@@ -4,7 +4,7 @@
    ========================================================================= */
 (function(){
 'use strict';
-console.log('SparK app.js v20260823-9 loaded');
+console.log('SparK app.js v20260823-10 loaded');
 
 /* ---------- 时钟 ---------- */
 function tick(){
@@ -4808,15 +4808,17 @@ function initWeather(force){
   // 缓存 30 分钟（force=true 时跳过，用于“保存 / 手动刷新”）
   if(!force){
     try{
-    var cached=localStorage.getItem('spark_weather');
-    if(cached){
-      var o=JSON.parse(cached);
-      if(o&&o.data&&(Date.now()-o.t)<30*60*1000){
-        renderWeather(el,o.data);
-        return;
+      var cached=localStorage.getItem('spark_weather');
+      if(cached){
+        var o=JSON.parse(cached);
+        if(o&&o.data&&(Date.now()-o.t)<30*60*1000){
+          renderWeather(el,o.data);
+          setClick();
+          return;
+        }
       }
-    }
-  }catch(e){}
+    }catch(e){}
+  }
   if(!KEY){
     el.innerHTML='<span class="weather-icon">🔑</span><span class="weather-main"><span class="weather-line1">配置天气密钥</span><span class="weather-line2">点击输入自己的 API Key</span></span>';
     return;
@@ -4884,7 +4886,7 @@ function initWeather(force){
     el.innerHTML='<span class="weather-icon">📍</span><span class="weather-main"><span class="weather-line1">需定位或城市</span><span class="weather-line2">设置中填写默认城市</span></span>';
   }
 }
-window.loadWeatherKey=loadWeatherKey;window.setWeatherKey=setWeatherKey;window.goWeatherSet=goWeatherSet;
+window.loadWeatherKey=loadWeatherKey;window.setWeatherKey=setWeatherKey;window.goWeatherSet=goWeatherSet;window.saveWeather=saveWeather;window.loadWeatherCity=loadWeatherCity;window.toast=toast;
 
 /* ====================================================================== */
 /* 首页粒子动画（轻量 canvas，纯离线）                                       */
@@ -5041,6 +5043,15 @@ function hexToRgba(hex,a){hex=String(hex).replace('#','');if(hex.length===3)hex=
 function applyAcc(hex){var r=document.documentElement.style;r.setProperty('--acc',hex);r.setProperty('--acc2',hexToRgba(hex,1));r.setProperty('--acc3',hexToRgba(hex,.12));r.setProperty('--acc4',hexToRgba(hex,.28));}
 function applyFont(s){document.documentElement.style.setProperty('--fs',s);}
 function applyTheme(n){var b=document.body;for(var i=0;i<=8;i++)b.classList.remove('t'+i);b.classList.add('t'+n);}
+function toast(msg,dur){
+  dur=dur||2200;
+  var el=document.createElement('div'); el.textContent=msg;
+  el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--acc);color:#000;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,.35);white-space:nowrap;opacity:0;transition:opacity .2s';
+  document.body.appendChild(el);
+  requestAnimationFrame(function(){el.style.opacity='1';});
+  setTimeout(function(){el.style.opacity='0';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},240);},dur);
+  return el;
+}
 function saveSettings(s){try{localStorage.setItem('spark_settings',JSON.stringify(s));}catch(e){}}
 function loadSettings(){var def={acc:'#FF8C42',fs:1,theme:0},s=def;try{var raw=localStorage.getItem('spark_settings');if(raw)s=Object.assign(def,JSON.parse(raw));}catch(e){}return s;}
 function _markAcc(hex){document.querySelectorAll('#accSwatches .swatch').forEach(function(el){el.classList.toggle('on',el.dataset.c&&el.dataset.c.toLowerCase()===String(hex).toLowerCase());});}
