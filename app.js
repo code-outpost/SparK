@@ -4,6 +4,7 @@
    ========================================================================= */
 (function(){
 'use strict';
+console.log('SparK app.js v20260823-9 loaded');
 
 /* ---------- 时钟 ---------- */
 function tick(){
@@ -72,7 +73,7 @@ var RESUME_ICONS={
   Globe:'<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/>'
 };
 function rEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-function rIcon(name,color){if(!RESUME_ICONS[name])return '';return '<svg class="ri" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="'+RESUME_ICONS[name]+'"/></svg>';}
+function rIcon(name,color){if(!RESUME_ICONS[name])return '';var stroke=color||'#555';var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="'+stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+RESUME_ICONS[name]+'</svg>';var uri='data:image/svg+xml,'+encodeURIComponent(svg);return '<span class="ri-wrap"><img class="ri" src="'+uri+'" alt=""></span>';}
 function htmlToList(str){
   if(!str)return [];
   var m=str.match(/<li[^>]*>(.*?)<\/li>/gi);
@@ -244,22 +245,26 @@ function resumeSched(){if(RESUME_STATE._t)clearTimeout(RESUME_STATE._t);RESUME_S
 function fitResumePreview(ifr){
   if(!ifr)return;
   var doc=ifr.contentDocument;if(!doc)return;
-  var host=doc.querySelector('.r-scale'),pg=doc.querySelector('.page');
-  if(!host||!pg)return;
+  var pg=doc.querySelector('.page');if(!pg)return;
   var design=pg.offsetWidth||0;
   if(design<10){setTimeout(function(){fitResumePreview(ifr);},120);return;}
-  var avail=doc.documentElement.clientWidth||design;
-  var s=Math.min(1,avail/design);
-  // scale from top-left so the resume hugs the left edge and no blank gutter appears
-  host.style.transformOrigin='top left';
-  host.style.transform='scale('+s+')';
-  host.style.width=design+'px';
-  host.style.height=pg.offsetHeight+'px';
-  host.style.margin='0';
-  // let the parent CSS control the iframe height; clear any inline sizing from previous versions
-  ifr.style.height='';
-  ifr.style.minHeight='';
+  var inner=document.getElementById('r-preview-inner');if(!inner)return;
+  var wrap=inner.parentNode;if(!wrap)return;
+  // 预览固定按 794px（导出 PDF 的设计宽）渲染，仅做视觉缩放以适配面板；
+  // 这样预览与导出的断点 / 分栏 / 间距完全一致，不再“看着不一样”。
+  var avail=wrap.clientWidth||794;
+  var k=Math.min(1,avail/794);
+  var H=pg.offsetHeight||0;
+  ifr.style.position='absolute';ifr.style.top='0';ifr.style.left='0';
+  ifr.style.width='794px';
+  ifr.style.height=H+'px';
+  ifr.style.transformOrigin='top left';
+  ifr.style.transform='scale('+k+')';
+  inner.style.width=(794*k)+'px';
+  inner.style.height=(H*k)+'px';
 }
+// 面板宽度变化（窗口缩放 / 切到预览）时重新适配，保证预览始终与导出一致
+if(!RESUME_STATE._fitBound){RESUME_STATE._fitBound=true;window.addEventListener('resize',function(){var i=document.getElementById('r-preview');if(i)fitResumePreview(i);});}
 function rMToggle(mode){
   var body=document.querySelector('#r-editor .r-editor-body');if(!body)return;
   body.classList.toggle('r-show-form',mode==='form');
@@ -286,14 +291,20 @@ function buildResumeHTML(d){
     var v=b[f.key];if(!v)return;
     var ic=(b.icons&&b.icons[f.key])||'';
     var display=f.key==='birthDate'?v.replace(/-/g,'/'):v;
-    rawContacts.push({key:f.key,html:'<span class="ct">'+(ic?rIcon(ic,tc):'')+'<span>'+rEsc(display)+'</span></span>'});
+    rawContacts.push({key:f.key,html:'<span class="ct">'+(ic?rIcon(ic,two?'#fff':tc):'')+'<span>'+rEsc(display)+'</span></span>'});
   });
-  (b.customFields||[]).forEach(function(cf){if(cf.value)rawContacts.push({key:'custom',html:'<span class="ct">'+(cf.icon?rIcon(cf.icon,tc):'')+'<span>'+rEsc(cf.value)+'</span></span>'});});
+  (b.customFields||[]).forEach(function(cf){if(cf.value)rawContacts.push({key:'custom',html:'<span class="ct">'+(cf.icon?rIcon(cf.icon,two?'#fff':tc):'')+'<span>'+rEsc(cf.value)+'</span></span>'});});
   var contactsAll=rawContacts.filter(function(c){return c.key!=='birthDate';}).map(function(c){return c.html;}).join('');
   var photo='';
   if(b.photoConfig&&b.photoConfig.visible){
     var pc=b.photoConfig||{},pw=pc.width||90,ph=pc.height||120,pbr=(!pc.borderRadius||pc.borderRadius==='none')?'0':(pc.borderRadius||'4px');
-    photo='<div class="photo" style="width:'+pw+'px;height:'+ph+'px;border-radius:'+pbr+'"><img src="'+rEsc(b.photo||'')+'" alt="" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'ph\');this.parentNode.textContent=\''+rEsc((b.name||' ').slice(0,1))+'\'"></div>';
+    // 用 background-image 代替 <img>：html2canvas 1.4.1 不支持 object-fit:cover，
+    // 但支持 background-size:cover，这样预览与导出都能正确裁剪图片。
+    if(b.photo){
+      photo='<div class="photo" style="width:'+pw+'px;height:'+ph+'px;line-height:'+ph+'px;border-radius:'+pbr+';background-image:url(\''+rEsc(b.photo)+'\');background-size:cover;background-position:center;background-repeat:no-repeat;"></div>';
+    }else{
+      photo='<div class="photo ph" style="width:'+pw+'px;height:'+ph+'px;line-height:'+ph+'px;border-radius:'+pbr+'">'+rEsc((b.name||' ').slice(0,1))+'</div>';
+    }
   }
   var coreInner='<div class="r-name">'+rEsc(b.name||'姓名')+'</div>'+(b.title?'<div class="r-title">'+rEsc(b.title)+'</div>':'')+(b.employementStatus?'<div class="r-status">'+rEsc(b.employementStatus)+'</div>':'');
   var birthModern=two&&b.birthDate?'<div class="r-birth">'+rEsc(b.birthDate.replace(/-/g,'/'))+'</div>':'';
@@ -317,14 +328,14 @@ function buildResumeHTML(d){
     var main='';
     enabled.forEach(function(ms){if(['skills','experience','projects'].indexOf(ms.id)>-1)main+=rSec(ms.id,secHTML(ms.id));});
     if(selfEval)main+=selfSec();
-    return docOpen+'<div class="r-scale"><div class="page"><div class="r-cols"><aside class="r-side">'+side+'</aside><div class="r-main">'+main+'</div></div></div></div></body></html>';
+    return docOpen+'<div class="r-scale tpl-'+tpl+'"><div class="page"><div class="r-cols"><aside class="r-side">'+side+'</aside><div class="r-main">'+main+'</div></div></div></div></body></html>';
   }
   var hStyle=hCenter?'r-head-center':'r-head-left';
   var header='<header class="r-head '+hStyle+'"><div class="r-head-main">'+photo+'<div class="r-head-tx">'+info+'</div></div></header>';
   var main='';
   enabled.forEach(function(ms){if(ms.id==='basic')return;main+=rSec(ms.id,secHTML(ms.id));});
   if(selfEval)main=selfSec()+main;
-  return docOpen+'<div class="r-scale"><div class="page">'+header+main+'</div></div></body></html>';
+  return docOpen+'<div class="r-scale tpl-'+tpl+'"><div class="page">'+header+main+'</div></div></body></html>';
 }
 function rSecIco(ms){return ms&&ms.icon?('<span class="r-sec-ic">'+ms.icon+'</span>'):'';}
 function rSec(id,h){return '<section class="r-sec" data-sec="'+rEsc(id)+'">'+h+'</section>';}
@@ -346,7 +357,7 @@ function rSecHTML(ms,d,tc){
   if(id==='education'){
     var items=(d.education||[]).filter(function(x){return x.visible!==false;}).map(function(e){
       var head=rEsc(e.school||'')+(e.major?' · '+rEsc(e.major):'')+(e.degree?' · '+rEsc(e.degree):'');
-      var meta=[e.startDate,e.endDate].filter(Boolean).join(' ~ ');
+      var meta=(e.date||[e.startDate,e.endDate].filter(Boolean).join(' ~ '));
       return '<div class="r-item"><div class="r-item-h"><span class="r-item-t">'+head+'</span><span class="r-item-d">'+rEsc(meta)+'</span></div>'+(e.gpa?'<div class="r-item-s">GPA：'+rEsc(e.gpa)+'</div>':'')+'<div class="r-html">'+(e.description||'')+'</div></div>';
     }).join('');
     return '<div class="r-sec-title">'+rSecIco(ms)+'教育经历</div>'+items;
@@ -362,43 +373,49 @@ function RESUME_CSS(tpl,g,tc){
     'body{color:#222;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:'+fs+'px;line-height:'+lh+';}'+
     '.page{max-width:820px;min-width:760px;margin:0 auto;padding:'+pad+'px;box-sizing:border-box;background:#fff;}'+
     '.r-head{margin-bottom:'+ss+'px;}'+
-    '.r-head-main{display:flex;align-items:flex-start;gap:16px;}'+
-    '.r-head-left .r-head-main{justify-content:flex-start;}'+
+    '.r-head-main{display:flex;align-items:flex-start;width:100%;}'+
+    '.r-head-main > .photo{display:block;flex:0 0 auto;vertical-align:top;margin-right:16px;}'+
+    '.r-head-main > .r-head-tx{display:block;flex:1 1 auto;min-width:0;}'+
+    '.r-head-left .r-head-main{text-align:left;}'+
     '.r-head-center{text-align:center;}'+
-    '.r-head-center .r-head-main{justify-content:center;flex-direction:column;align-items:center;text-align:center;}'+
-    '.r-head-center .r-contacts{justify-content:center;}'+
-    '.r-head-center .photo{margin-bottom:10px;}'+
-    '.photo{width:90px;height:120px;flex:0 0 auto;background:#ececec;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:40px;font-weight:700;overflow:hidden;}'+
-    '.photo img{width:100%;height:100%;object-fit:cover;}'+
+    '.r-head-center .r-head-main{display:block;text-align:center;}'+
+    '.r-head-center .r-head-main > .photo{display:block;margin:0 auto 10px;padding-right:0;}'+
+    '.r-head-center .r-head-main > .r-head-tx{display:block;}'+
+    '.r-head-center .r-contacts{text-align:center;}'+
+    '.photo{width:90px;height:120px;background:#ececec;border-radius:4px;text-align:center;line-height:120px;color:#bbb;font-size:40px;font-weight:700;overflow:hidden;}'+
     '.photo.ph{background:'+tc+'1a;color:'+tc+';}'+
-    '.r-name{font-size:'+(fs*1.4).toFixed(1)+'px;font-weight:800;letter-spacing:.4px;line-height:1.15;word-break:break-word;}'+
+    '.r-name{font-size:'+(fs*1.4).toFixed(1)+'px;font-weight:800;color:#222;letter-spacing:.4px;line-height:1.15;word-break:break-word;}'+
     '.r-title{font-size:'+shs+'px;color:#555;margin-top:3px;}'+
     '.r-status{display:inline-block;font-size:11px;color:#666;margin-top:6px;padding:1px 9px;border:1px solid #ddd;border-radius:20px;}'+
-    '.r-contacts{display:flex;flex-wrap:wrap;gap:3px 14px;margin-top:9px;font-size:'+(fs*0.78).toFixed(1)+'px;color:#555;}'+
-    '.ct{display:inline-flex;align-items:center;gap:4px;}'+
-    '.ri{width:13px;height:13px;flex:0 0 auto;}'+
-    '.r-cols{display:grid;grid-template-columns:200px 1fr;gap:34px;align-items:start;}'+
-    '.r-side{min-width:0;}'+
+    '.r-contacts{display:block;margin-top:9px;font-size:'+(fs*0.78).toFixed(1)+'px;color:#555;}'+
+    '.r-contacts .ct{display:inline-block;vertical-align:middle;margin-right:14px;margin-bottom:3px;}'+
+    '.ct{display:inline-block;vertical-align:middle;}'+
+    '.ct .ri-wrap{margin-right:8px;}'+
+    '.ri-wrap{display:inline-block;text-align:center;line-height:22px;width:22px;height:22px;border-radius:50%;background:#f0f0f0;vertical-align:middle;}'+
+    '.ri{width:14px;height:14px;display:inline-block;vertical-align:middle;border:none;color:'+tc+';}'+
+    '.r-cols{display:table;width:100%;}'+
+    '.r-side{display:table-cell;vertical-align:top;width:200px;padding-right:34px;}'+
     '.r-side-info{margin-bottom:'+ss+'px;}'+
     '.r-side .r-sec{margin-bottom:'+ss+'px;}'+
-    '.r-main{min-width:0;}'+
+    '.r-main{display:table-cell;vertical-align:top;width:auto;}'+
     '.r-sec{margin-bottom:'+ss+'px;}'+
-    '.r-sec-title{font-size:'+hs+'px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:6px;}'+
+    '.r-sec-title{font-size:'+hs+'px;font-weight:700;color:#222;margin-bottom:9px;break-after:avoid;page-break-after:avoid;}'+
+    '.r-sec-title .r-sec-ic{display:inline-block;vertical-align:middle;margin-right:6px;}'+
     '.r-sec-ic{font-size:'+(hs*0.95).toFixed(1)+'px;}'+
-    '.r-item{margin-bottom:13px;}'+
-    '.r-item-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}'+
-    '.r-item-t{font-weight:700;font-size:'+(fs*0.95).toFixed(1)+'px;word-break:break-word;}'+
+    '.r-item{margin-bottom:13px;break-inside:avoid;page-break-inside:avoid;}'+
+    '.r-item-h{display:flex;align-items:baseline;width:100%;}'+
+    '.r-item-t{display:block;flex:1 1 auto;min-width:0;font-weight:700;color:#222;font-size:'+(fs*0.95).toFixed(1)+'px;word-break:break-word;}'+
     '.r-item-s{color:#666;font-size:'+(fs*0.8).toFixed(1)+'px;margin:2px 0;}'+
-    '.r-item-d{color:#999;font-size:'+(fs*0.78).toFixed(1)+'px;white-space:nowrap;flex:0 0 auto;}'+
+    '.r-item-d{display:block;flex:0 0 auto;text-align:right;padding-left:12px;color:#999;font-size:'+(fs*0.78).toFixed(1)+'px;white-space:nowrap;}'+
     '.r-html{font-size:'+(fs*0.82).toFixed(1)+'px;color:#333;}'+
     '.r-html ul,.r-html ol{margin-left:18px;}'+
     '.r-html li{margin:3px 0;}'+
     '.r-html p{margin:4px 0;}'+
     tplCSS(tpl,g,tc)+
-    '@media screen and (max-width:760px){.page{padding:22px 16px}.r-cols{grid-template-columns:170px 1fr;gap:18px}}'+
-    '@media screen and (max-width:560px){.r-cols{grid-template-columns:1fr}.r-name{font-size:'+(fs*1.2).toFixed(1)+'px}.r-contacts{font-size:'+(fs*0.72).toFixed(1)+'px}.photo{width:72px;height:90px;font-size:32px}}'+
+    '@media screen and (max-width:760px){.page{padding:22px 16px}.r-side{width:170px;padding-right:18px}}'+
+    '@media screen and (max-width:560px){.r-side{float:none;width:auto;padding-right:0;margin-bottom:'+ss+'px}.r-main{overflow:visible}.r-name{font-size:'+(fs*1.2).toFixed(1)+'px}.r-contacts{font-size:'+(fs*0.72).toFixed(1)+'px}.photo{width:72px;height:90px;line-height:90px;font-size:32px}}'+
     '@media screen and (max-width:900px){.page{box-shadow:0 4px 18px rgba(0,0,0,.15)}}'+
-    '@media print{body{font-size:11pt}.page{min-width:auto;max-width:none;padding:12mm 14mm}.r-cols{grid-template-columns:200px 1fr}.photo{width:90px;height:120px;font-size:40px}}';
+    '@media print{body{font-size:11pt}.page{min-width:auto;max-width:none;padding:12mm 14mm}.r-side{width:200px;padding-right:34px}.photo{width:90px;height:120px;line-height:120px;font-size:40px}}';
   return base;
 }
 function tplCSS(tpl,g,tc){
@@ -406,41 +423,42 @@ function tplCSS(tpl,g,tc){
   var fs=(g&&g.baseFontSize)||15;
   if(tpl==='modern'){
     s+='.tpl-modern .page{width:794px;max-width:794px;min-width:0;padding:0 !important;background:#fff}'+
-      '.tpl-modern .r-cols{grid-template-columns:265px 1fr;gap:0;align-items:stretch;min-height:1123px}'+
-      '.tpl-modern .r-side{background:'+tc+';color:#fff;padding:28px 22px}'+
+      '.tpl-modern .r-cols{display:block;width:794px;min-height:1123px;overflow:visible}'+
+      '.tpl-modern .r-cols::after{content:"";display:table;clear:both}'+
+      '.tpl-modern .r-side{float:left;width:265px;padding-right:0;background:'+tc+';color:#fff;padding:28px 22px;}'+
+      '.tpl-modern .r-main{float:left;width:529px;background:#fff;padding:28px 18px;}'+
       '.tpl-modern .r-side-core{text-align:center;border-bottom:1px solid rgba(255,255,255,.35);padding-bottom:14px;margin-bottom:14px}'+
       '.tpl-modern .r-side-contact{border-bottom:1px solid rgba(255,255,255,.35);padding-bottom:14px;margin-bottom:14px}'+
       '.tpl-modern .r-side-info .r-name{color:#fff;font-size:'+(fs*1.7).toFixed(1)+'px;margin-bottom:6px}'+
       '.tpl-modern .r-side-info .r-title{color:rgba(255,255,255,.85);font-size:'+(fs*0.95).toFixed(1)+'px;margin-bottom:6px}'+
       '.tpl-modern .r-side-info .r-status{border:none;padding:0;color:rgba(255,255,255,.75);font-size:'+(fs*0.85).toFixed(1)+'px;margin-top:0;margin-bottom:4px}'+
       '.tpl-modern .r-side-info .r-birth{color:rgba(255,255,255,.75);font-size:'+(fs*0.85).toFixed(1)+'px;margin-bottom:2px}'+
-      '.tpl-modern .r-contacts{color:rgba(255,255,255,.85);font-size:'+(fs*0.85).toFixed(1)+'px;flex-direction:column;gap:10px;margin-top:0}'+
-      '.tpl-modern .r-contacts .ct{gap:8px}'+
-      '.tpl-modern .r-contacts .ri{stroke:#fff;width:14px;height:14px}'+
+      '.tpl-modern .r-contacts{color:rgba(255,255,255,.85);font-size:'+(fs*0.85).toFixed(1)+'px;margin-top:0}'+
+      '.tpl-modern .r-contacts .ct{display:block;margin-right:0;margin-bottom:10px;}'+
+      '.tpl-modern .r-contacts .ri-wrap{background:rgba(255,255,255,.15)}'+
+      '.tpl-modern .r-contacts .ri{color:#fff;width:14px;height:14px}'+
       '.tpl-modern .photo{background:transparent;border:2px solid rgba(255,255,255,.35);color:#fff;margin:0 auto 18px}'+
       '.tpl-modern .photo.ph{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.4)}'+
-      '.tpl-modern .photo img{border-radius:inherit}'+
       '.tpl-modern .r-side .r-sec-title{color:#fff;border-left:3px solid #fff;padding-left:8px;margin-bottom:10px}'+
       '.tpl-modern .r-side .r-item{margin-bottom:10px}'+
-      '.tpl-modern .r-side .r-item-h{flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:3px}'+
-      '.tpl-modern .r-side .r-item-t{color:#fff;font-size:'+(fs*0.9).toFixed(1)+'px}'+
-      '.tpl-modern .r-side .r-item-d{color:rgba(255,255,255,.7);font-size:'+(fs*0.78).toFixed(1)+'px}'+
+      '.tpl-modern .r-side .r-item-h{display:block;}'+
+      '.tpl-modern .r-side .r-item-t{display:block;color:#fff;font-size:'+(fs*0.9).toFixed(1)+'px}'+
+      '.tpl-modern .r-side .r-item-d{display:block;margin-left:0;margin-top:2px;color:rgba(255,255,255,.7);font-size:'+(fs*0.78).toFixed(1)+'px}'+
       '.tpl-modern .r-side .r-html{color:rgba(255,255,255,.85);font-size:'+(fs*0.8).toFixed(1)+'px}'+
-      '.tpl-modern .r-main{background:#fff;padding:28px 18px}'+
       '.tpl-modern .r-main .r-sec-title{color:'+tc+';border-bottom:2px solid '+tc+';padding-bottom:5px;margin-bottom:10px}'+
-      '@media print{.tpl-modern .page{max-width:none;width:210mm;min-height:297mm}.tpl-modern .r-cols{grid-template-columns:265px 1fr}}';
+      '@media print{.tpl-modern .page{max-width:none;width:210mm;min-height:297mm}.tpl-modern .r-side{width:265px;padding-right:0}.tpl-modern .r-main{width:calc(100% - 265px)}}';
   }else if(tpl==='left-right'){
-    s+='.tpl-left-right .r-sec-title{background:'+tc+';color:#fff;padding:7px 12px;border-radius:6px;font-size:14px;display:flex;align-items:center;gap:7px}'+
-      '.tpl-left-right .r-sec-title .r-sec-ic{filter:brightness(2.2)}';
+    s+='.tpl-left-right .r-sec-title{background:'+tc+';color:#fff;padding:7px 12px;border-radius:6px;font-size:14px;}'+
+      '.tpl-left-right .r-sec-title .r-sec-ic{display:inline-block;vertical-align:middle;margin-right:7px;filter:brightness(2.2)}';
   }else if(tpl==='classic'){
     s+='.tpl-classic .r-head{border-bottom:3px double '+tc+';padding-bottom:14px}'+
-      '.tpl-classic .r-contacts{justify-content:center}'+
+      '.tpl-classic .r-contacts{text-align:center}'+
       '.tpl-classic .r-sec-title{color:#222;text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-bottom:1px solid #ccc;padding-bottom:5px;font-size:14px}'+
       '.tpl-classic .r-name{letter-spacing:.1em}';
   }else if(tpl==='elegant'){
     s+='.tpl-elegant .r-head-center .photo{border-radius:50%}'+
-      '.tpl-elegant .r-sec-title{color:'+tc+';font-weight:600;display:flex;align-items:center;gap:8px;font-size:15px}'+
-      '.tpl-elegant .r-sec-title::before{content:"";width:16px;height:3px;background:'+tc+';border-radius:2px;flex:0 0 auto}'+
+      '.tpl-elegant .r-sec-title{color:'+tc+';font-weight:600;font-size:15px}'+
+      '.tpl-elegant .r-sec-title::before{content:"";display:inline-block;vertical-align:middle;width:16px;height:3px;background:'+tc+';border-radius:2px;margin-right:8px}'+
       '.tpl-elegant .r-item-t{color:#222}';
   }else if(tpl==='minimalist'){
     s+='.tpl-minimalist .r-name{font-weight:200;letter-spacing:.14em}'+
@@ -448,10 +466,10 @@ function tplCSS(tpl,g,tc){
       '.tpl-minimalist .r-sec-title{font-weight:500;text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:#999;border-bottom:1px solid #eee;padding-bottom:7px}'+
       '.tpl-minimalist .r-item-t{font-weight:500}'+
       '.tpl-minimalist .r-contacts{color:#777}'+
-      '.tpl-minimalist .r-head-main{gap:14px}';
+      '.tpl-minimalist .r-head-main > .photo{margin-right:14px}';
   }else if(tpl==='creative'){
-    s+='.tpl-creative .r-sec-title{color:'+tc+';font-weight:700;display:flex;align-items:center;gap:8px}'+
-      '.tpl-creative .r-sec-title .r-sec-ic{background:'+tc+';color:#fff;border-radius:5px;padding:2px 6px;font-size:12px}'+
+    s+='.tpl-creative .r-sec-title{color:'+tc+';font-weight:700;}'+
+      '.tpl-creative .r-sec-title .r-sec-ic{display:inline-block;vertical-align:middle;margin-right:8px;background:'+tc+';color:#fff;border-radius:5px;padding:2px 6px;font-size:12px}'+
       '.tpl-creative .r-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:12px 14px}';
   }else if(tpl==='timeline'){
     s+='.tpl-timeline .r-sec-title{color:'+tc+';font-weight:700;font-size:15px}'+
@@ -479,6 +497,7 @@ function tplCSS(tpl,g,tc){
   }
   return s;
 }
+function isMobileUA(){return /Android|iPhone|iPad|iPod|Mobile|Windows Phone|HarmonyOS/i.test(navigator.userAgent||'');}
 var _h2p=null,_h2pLoading=false,_h2pWait=[];
 var H2P_LOCAL='jl/html2pdf.bundle.min.js';
 var H2P_CDN='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
@@ -499,44 +518,99 @@ function loadHtml2pdf(cb){
   };
   document.head.appendChild(s);
 }
-function isMobileUA(){return /Android|iPhone|iPad|iPod|Mobile|Windows Phone|HarmonyOS/i.test(navigator.userAgent||'');}
 function resumeExportPDF(){
   var d=RESUME_STATE.data;
   if(!d){flash('没有可导出的简历数据');return;}
-  // 统一用 html2pdf 生成真正的 PDF 文件下载（桌面 / 手机一致），不再走
-  // window.open 弹窗（手机浏览器会拦截 → 误触发浏览器打印）。
-  // 若引擎尚未就绪（例如刚进页面就点「导出 PDF」），先等它加载完成再生成，
-  // 避免误走到「浏览器打印」兜底。
-  if(_h2p){ exportHtml2pdf(d); return; }
-  flash('正在准备 PDF 引擎…');
+  // 直接下载 .pdf 文件（html2pdf = html2canvas + jsPDF，能正确渲染中文与系统字体）。
+  // 仅当库实在加载不出（离线且 CDN 也不可达）时才退化到「原生打印」。
   loadHtml2pdf(function(lib){
-    if(lib){ exportHtml2pdf(d); }
-    else { exportPrint(d); }   // 仅在 html2pdf 实在不可用（离线且 CDN 也不可达）时才退化为打印
+    if(lib){ exportResumePdf(d); }
+    else { exportPrint(d); }
   });
 }
-function exportHtml2pdf(d){
-  flash('正在生成 PDF…');
-  var name=(d.basic&&d.basic.name)?(d.basic.name+'的简历'):'简历';
-  var html=buildResumeHTML(d);
-  var iframe=document.createElement('iframe');
-  iframe.setAttribute('aria-hidden','true');
-  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:794px;height:1200px;border:none;pointer-events:none;z-index:-1;opacity:0';
-  document.body.appendChild(iframe);
-  var idoc=iframe.contentDocument||iframe.contentWindow.document;
-  idoc.open();idoc.write(html);idoc.close();
-  function cleanup(){if(iframe.parentNode)iframe.parentNode.removeChild(iframe);}
-  setTimeout(function(){
-    var page=idoc.querySelector('.page');
-    if(!page){cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');return;}
-    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff',logging:false,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
-    try{
-      // html2pdf 的全局对象是一个工厂函数，必须 html2pdf() 调用来拿到 Worker 实例，
-      // 再链式 .set().from().save()。直接 _h2p.set(...) 会因 _h2p.set 为 undefined 抛错，
-      // 被外层 catch 捕获后误走到 window.print()。这里兼容「已是实例」的情况。
-      var worker=(typeof _h2p==='function')?_h2p():_h2p;
-      worker.set(opt).from(page).save().then(function(){flash('PDF 已下载');cleanup();}).catch(function(err){console.error(err);cleanup();try{window.print();}catch(e){}flash('PDF 生成失败，已改为打印');});
-    }catch(e){cleanup(); try{window.print();}catch(e2){} flash('PDF 生成失败，已改为打印');}
-  },300);
+function exportResumePdf(d){
+  // 使用持续提示条：生成过程可能持续数秒，原 flash 1.2s 就消失会让用户误以为没反应。
+  function notify(msg,duration){
+    var el=document.createElement('div'); el.textContent=msg;
+    el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--acc);color:#000;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,.35);white-space:nowrap';
+    document.body.appendChild(el);
+    if(duration){ setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},duration); }
+    return el;
+  }
+  var busy=notify('正在生成 PDF…',0);
+  try{
+    // 关键修复：用 buildResumeHTML 生成完整简历文档，把「整份 CSS + 内容」注入到一个
+    // 主文档内的临时容器中，再由 html2canvas 截图。
+    // 容器使用 position:fixed 放在视口左上角、z-index:-1 放到所有 UI 后面，
+    // 这样既不会遮挡页面，又能让 html2canvas 完整捕获整个元素（不会再像 left:-10000px 那样只截到碎片）。
+    var full=buildResumeHTML(d);
+    var parsed=new DOMParser().parseFromString(full,'text/html');
+    var cssText=parsed.querySelector('style')?parsed.querySelector('style').textContent:'';
+    var bodyInner=parsed.body?parsed.body.innerHTML:'';
+    var holder=document.createElement('div');
+    holder.setAttribute('data-resume-holder','1');
+    // 页面内隐藏但保留在文档流中可测量：opacity:0 + pointer-events:none 避免遮挡和闪烁；
+    // html2canvas 克隆时会通过 onclone 把 opacity 恢复为 1，确保截图正常。
+    holder.style.cssText='position:fixed;left:0;top:0;width:794px;z-index:-1;margin:0;padding:0;pointer-events:none;opacity:0';
+    var st=document.createElement('style'); st.textContent=cssText; holder.appendChild(st);
+    var page=document.createElement('div'); page.innerHTML=bodyInner; holder.appendChild(page);
+    document.body.appendChild(holder);
+    // 手动分页保护：把跨页的 .r-item 用真实 spacer 推到下一页，
+    // 避免“前端监控平台·技术负责人”这种经历条目被分页从中间截断。
+    // 这里不用 html2pdf 的 pagebreak（它的 avoid-all 会重排乱序），
+    // 而是自己按 A4 高度（1123 CSS px）算，插入等高空 div 即可。
+    var PAGE_H=1123;
+    var itemRects=Array.from(holder.querySelectorAll('.r-item')).map(function(el){return {el:el,top:el.offsetTop,ih:el.offsetHeight};});
+    var pushed=0;
+    for(var i=0;i<itemRects.length;i++){
+      var it=itemRects[i];
+      var top=it.top+pushed, ih=it.ih;
+      var startPage=Math.floor(top/PAGE_H), endPage=Math.floor((top+ih-1)/PAGE_H);
+      if(endPage>startPage){
+        var push=PAGE_H-(top%PAGE_H);
+        // 只有当当前页剩余空间还比较多（>15%页高）时才推，避免一页只剩一点点空白就整页浪费
+        if(push>0 && push<PAGE_H*0.85){
+          var spacer=document.createElement('div');
+          spacer.style.height=push+'px';
+          it.el.parentNode.insertBefore(spacer, it.el);
+          pushed+=push;
+        }
+      }
+    }
+    // 直接截图整个容器（固定 794 宽），不再单独抓 .page，
+    // 避免 .page 的 margin:0 auto 在克隆文档里重新居中、左侧被裁掉。
+    var target=holder;
+    // 核心修复：html2canvas 对固定/绝对定位容器容易把高度算成 0（导致导出空白），
+    // 必须在 html2canvas 选项里显式传入 width/height，强制按元素真实尺寸栅格化。
+    // 额外防御：取 holder / .page / getBoundingClientRect() 三者最大高度，
+    // 并把 holder 显式设成这个高度，进一步避免某些浏览器/模板下量高偏小。
+    var pageEl=holder.querySelector('.page')||page;
+    var w=holder.offsetWidth||794;
+    var h=Math.max(holder.scrollHeight,pageEl.scrollHeight,Math.round(pageEl.getBoundingClientRect().height),holder.offsetHeight)||1123;
+    holder.style.height=h+'px';
+    var name=(d.basic&&d.basic.name)||'resume';
+    var opt={margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,width:w,height:h,x:0,y:0,scrollX:0,scrollY:0,backgroundColor:'#ffffff',logging:false,windowWidth:794,windowHeight:h,useCORS:true,allowTaint:true,
+        onclone:function(doc){
+          var list=doc.querySelectorAll('[data-resume-holder]');
+          for(var i=0;i<list.length;i++){ list[i].style.opacity='1'; }
+        }},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
+    window.html2pdf().set(opt).from(target).save().then(function(){
+      busy.textContent='PDF 已生成并开始下载';
+      setTimeout(function(){if(busy.parentNode)busy.parentNode.removeChild(busy);},2500);
+    }).catch(function(err){
+      busy.textContent='生成失败，已改为打印导出';
+      try{exportPrint(d);}catch(e2){}
+      setTimeout(function(){if(busy.parentNode)busy.parentNode.removeChild(busy);},3500);
+    }).finally(function(){
+      setTimeout(function(){ if(holder.parentNode) holder.parentNode.removeChild(holder); }, 1500);
+    });
+  }catch(e){
+    busy.textContent='生成失败，已改为打印导出';
+    try{exportPrint(d);}catch(e2){}
+    setTimeout(function(){if(busy.parentNode)busy.parentNode.removeChild(busy);},3500);
+  }
 }
 function exportPrint(d){
   flash('正在打开打印 / 保存…（可选择“另存为 PDF”）');
@@ -4659,6 +4733,160 @@ function labCalc(){
 window.labPick=labPick;window.renderLab=renderLab;window.LAB=LAB;
 
 /* ====================================================================== */
+/* 顶部天气（和风天气 API）                                                  */
+/* ====================================================================== */
+function weatherIcon(code){
+  var map={
+    '100':'☀️','101':'🌤️','102':'⛅','103':'🌥️','104':'☁️',
+    '150':'☀️','151':'🌤️','152':'⛅','153':'🌥️','154':'☁️',
+    '300':'🌦️','301':'🌧️','302':'⛈️','303':'⛈️','304':'⛈️',
+    '305':'🌧️','306':'🌧️','307':'🌧️','308':'🌧️','309':'🌧️',
+    '310':'🌧️','311':'🌧️','312':'🌧️','313':'🌧️','314':'🌧️','315':'🌧️',
+    '399':'🌧️',
+    '400':'🌨️','401':'❄️','402':'❄️','403':'❄️','404':'🌨️','405':'🌨️','406':'🌨️','407':'🌨️',
+    '500':'🌫️','501':'🌫️','502':'🌫️','503':'🌫️','504':'🌫️','507':'🌫️','508':'🌫️',
+    '509':'🌫️','510':'🌫️','511':'🌫️','512':'🌫️','513':'🌫️','514':'🌫️','515':'🌫️',
+    '900':'🔥','901':'🌪️','999':'❓'
+  };
+  return map[String(code)]||'🌡️';
+}
+function renderWeather(el,data){
+  var line1=rEsc((data.temp||'--')+'°C '+(data.text||''));
+  var line2=rEsc((data.city||'未知城市')+' · '+(data.wind||'')+(data.windScale?data.windScale+'级':'')+' · 湿度'+(data.hum||'--')+'%');
+  if(data.feelsLike!==undefined) line2+=rEsc(' · 体感'+data.feelsLike+'°C');
+  var title=rEsc('相对湿度 '+(data.hum||'--')+'%');
+  if(data.vis!==undefined) title+=rEsc(' · 能见度 '+data.vis+'km');
+  if(data.pressure!==undefined) title+=rEsc(' · 气压 '+data.pressure+'hPa');
+  if(data.windSpeed!==undefined) title+=rEsc(' · 风速 '+data.windSpeed+'km/h');
+  el.innerHTML='<span class="weather-icon">'+weatherIcon(data.icon)+'</span>'+
+    '<span class="weather-main" title="'+title+'">'+
+    '<span class="weather-line1">'+line1+'</span>'+
+    '<span class="weather-line2">'+line2+'</span>'+
+    '</span>';
+}
+function loadWeatherKey(){
+  try{return localStorage.getItem('spark_weather_key')||'';}catch(e){return '';}
+}
+function loadWeatherCity(){
+  try{return localStorage.getItem('spark_weather_city')||'';}catch(e){return '';}
+}
+function setWeatherKey(key){
+  var k=String(key||'').trim();
+  try{localStorage.setItem('spark_weather_key',k);}catch(e){}
+  var inp=document.getElementById('weatherKey');if(inp)inp.value=k;
+}
+function saveWeather(){
+  var kInp=document.getElementById('weatherKey');
+  var cInp=document.getElementById('weatherCity');
+  var key=kInp?kInp.value:'';
+  var city=cInp?cInp.value:'';
+  setWeatherKey(key);
+  try{localStorage.setItem('spark_weather_city',city);}catch(e){}
+  try{localStorage.removeItem('spark_weather');}catch(e){} // 清缓存，强制重新获取
+  try{initWeather(true);}catch(e){}
+  toast(key?'已保存天气设置，正在获取天气…':'已保存（未填写密钥，天气暂不显示）');
+}
+function goWeatherSet(){
+  var el=document.querySelector('.nav-item[data-sect="set"]');if(el)nav(el,'set');
+  var inp=document.getElementById('weatherKey');if(inp){inp.focus();inp.select();}
+}
+function initWeather(force){
+  var el=document.getElementById('weather');
+  if(!el)return;
+  var KEY=loadWeatherKey();
+  var inp=document.getElementById('weatherKey');if(inp)inp.value=KEY;
+  var cityInp=document.getElementById('weatherCity');if(cityInp)cityInp.value=loadWeatherCity();
+  var defaultCity=loadWeatherCity();
+  function setClick(){
+    el.style.cursor='pointer';
+    el.title=KEY?'点击重新获取天气':'点击配置和风天气密钥';
+    el.onclick=function(){
+      if(KEY){ try{localStorage.removeItem('spark_weather');}catch(e){} initWeather(true); }
+      else { goWeatherSet(); }
+    };
+  }
+  // 缓存 30 分钟（force=true 时跳过，用于“保存 / 手动刷新”）
+  if(!force){
+    try{
+    var cached=localStorage.getItem('spark_weather');
+    if(cached){
+      var o=JSON.parse(cached);
+      if(o&&o.data&&(Date.now()-o.t)<30*60*1000){
+        renderWeather(el,o.data);
+        return;
+      }
+    }
+  }catch(e){}
+  if(!KEY){
+    el.innerHTML='<span class="weather-icon">🔑</span><span class="weather-main"><span class="weather-line1">配置天气密钥</span><span class="weather-line2">点击输入自己的 API Key</span></span>';
+    return;
+  }
+  setClick();
+  // 免费版域名用 devapi（天气+Geo 都在它上面）；
+  // 标准/商业版用 api（天气）+ geoapi（Geo）。逐个尝试并自动回退，兼容两种 key。
+  var GEO_HOSTS=['https://devapi.qweather.com/geo/v2/city/lookup','https://geoapi.qweather.com/v2/city/lookup'];
+  var WX_HOSTS=['https://devapi.qweather.com/v7/weather/now','https://api.qweather.com/v7/weather/now'];
+  function qwGet(urls,loc){
+    var i=0;
+    function step(){
+      if(i>=urls.length) return Promise.reject(new Error('所有和风域名均不可用'));
+      var url=urls[i]+'?location='+encodeURIComponent(loc)+'&key='+KEY;
+      return fetch(url)
+        .then(function(r){return r.json().then(function(j){return {status:r.status,j:j};});})
+        .then(function(res){
+          if(String(res.j.code)==='200') return res.j;                 // 成功
+          if(i<urls.length-1){ i++; return step(); }                    // 该域名未授权/无数据 → 试下一个
+          var t=(res.j.error&&res.j.error.title)||('code '+res.j.code);
+          throw new Error(t);
+        })
+        .catch(function(e){
+          if(i<urls.length-1){ i++; return step(); }                    // 网络/解析错误也回退
+          throw e;
+        });
+    }
+    return step();
+  }
+  function doFetch(loc,viaGeo){
+    el.innerHTML='<span class="weather-icon">🌡️</span><span class="weather-main"><span class="weather-line1">获取中…</span><span class="weather-line2">'+(viaGeo?'正在定位并获取天气':'正在获取 '+loc+' 的天气')+'</span></span>';
+    qwGet(GEO_HOSTS,loc)
+      .then(function(geo){
+        if(!geo.location||!geo.location[0]) throw new Error('未找到匹配城市');
+        var city=geo.location[0];
+        return qwGet(WX_HOSTS,city.id).then(function(w){
+          if(!w.now) throw new Error('天气数据缺失');
+          var now=w.now;
+          var data={
+            city:city.name,temp:now.temp,text:now.text,icon:now.icon,
+            wind:now.windDir,hum:now.humidity,windScale:now.windScale,
+            windSpeed:now.windSpeed,feelsLike:now.feelsLike,vis:now.vis,pressure:now.pressure
+          };
+          try{localStorage.setItem('spark_weather',JSON.stringify({t:Date.now(),data:data}));}catch(e){}
+          renderWeather(el,data);
+        });
+      })
+      .catch(function(e){
+        var msg=(e&&e.message)?e.message:'天气更新失败';
+        el.innerHTML='<span class="weather-icon">⚠️</span><span class="weather-main" title="和风天气：'+rEsc(msg)+'"><span class="weather-line1">天气更新失败</span><span class="weather-line2">'+rEsc(msg)+'</span></span>';
+        console.warn('[SparK] 天气获取失败：',msg);
+      });
+  }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var loc=pos.coords.longitude.toFixed(4)+','+pos.coords.latitude.toFixed(4);
+      doFetch(loc,true);
+    },function(err){
+      if(defaultCity){ doFetch(defaultCity,false); }
+      else { el.innerHTML='<span class="weather-icon">📍</span><span class="weather-main"><span class="weather-line1">定位失败</span><span class="weather-line2">可在设置填写默认城市</span></span>'; }
+    },{timeout:8000,enableHighAccuracy:false,maximumAge:10*60*1000});
+  } else if(defaultCity){
+    doFetch(defaultCity,false);
+  } else {
+    el.innerHTML='<span class="weather-icon">📍</span><span class="weather-main"><span class="weather-line1">需定位或城市</span><span class="weather-line2">设置中填写默认城市</span></span>';
+  }
+}
+window.loadWeatherKey=loadWeatherKey;window.setWeatherKey=setWeatherKey;window.goWeatherSet=goWeatherSet;
+
+/* ====================================================================== */
 /* 首页粒子动画（轻量 canvas，纯离线）                                       */
 /* ====================================================================== */
 function initHero(){
@@ -4843,22 +5071,17 @@ function initData(){
   try{resumePick();}catch(e){}
   var _rf=document.getElementById('r-form');
   if(_rf){_rf.addEventListener('input',resumeOnInput);_rf.addEventListener('click',resumeFormClick);_rf.addEventListener('change',resumeOnChange);}
-  // 报告默认一条
-  addRpItem();
   // 雷达输入
   buildRadarInputs();
   // 新能源岗位 JD 库
   renderJD();
-  // 场景库
-  renderSC();
-  // 知识库
-  renderKB();
   // 公式速算器
   renderLab();
 }
 
 try{
   initData();
+  try{initWeather();}catch(e){}
   try{initHero();}catch(e){}
   try{init3D&&init3D();}catch(e){}
   try{pfTplChange('欠频单段');}catch(e){}
@@ -4873,5 +5096,11 @@ try{
     _markAcc(_s.acc||'#FF8C42');_markTheme(_s.theme||0);
   }catch(e){}
 }catch(e){console.error(e);}
+
+/* ---------- 对外导出 API（供「导出 PDF」按钮与自动化/测试调用） ---------- */
+window.SparKResume = {
+  buildResumeHTML: buildResumeHTML,
+  exportResumePdf: exportResumePdf
+};
 
 })();
