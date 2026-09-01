@@ -3899,7 +3899,7 @@ var _PFTPL={
   '欠频单段':{formula:'(f < fn - fd) ? k1 * Pn * (fn - f) / fn : 0',vars:[{id:'k1',lbl:'调差系数 k1',val:'0.04',hint:'欠频方向 droop 系数'}],desc:'ΔP = k₁·Pn·(fn−f)/fn  仅欠频生效'},
   '欠超频各段':{formula:'f < fn - fd ? k1 * Pn * (fn - f) / fn : f > fn + fd ? k2 * Pn * (fn - f) / fn : 0',vars:[{id:'k1',lbl:'欠频 droop k1',val:'0.04',hint:'f<fn−fd 的 droop'},{id:'k2',lbl:'超频 droop k2',val:'0.04',hint:'f>fn+fd 的 droop'}],desc:'欠频用 k1，超频用 k2'},
   '欠频双段':{formula:'f < u2 ? k2 * Pn * (fn - f) / fn : f < fn - fd ? k1 * Pn * (fn - f) / fn : 0',vars:[{id:'u2',lbl:'二段启动频率 u2',val:'49.5',hint:'第二段启动频率 Hz'},{id:'k1',lbl:'一段 droop k1',val:'0.03',hint:'浅降 droop'},{id:'k2',lbl:'二段 droop k2',val:'0.06',hint:'陡降 droop'}],desc:'f<u2 用 k2，否则用 k1'},
-  '欠超频对称':{formula:'(f < fn - fd || f > fn + fd) ? k1 * Pn * Math.abs(fn - f) / fn : 0',vars:[{id:'k1',lbl:'统一 droop k1',val:'0.04',hint:'共用 droop'}],desc:'ΔP = k₁·Pn·|fn−f|/fn'}
+  '欠超频对称':{formula:'(f < fn - fd || f > fn + fd) ? k1 * Pn * abs(fn - f) / fn : 0',vars:[{id:'k1',lbl:'统一 droop k1',val:'0.04',hint:'共用 droop'}],desc:'ΔP = k₁·Pn·|fn−f|/fn'}
 };
 function pfTab(el){
   document.querySelectorAll('#pf-tabs .tab').forEach(function(x){x.classList.remove('on')});
@@ -3948,6 +3948,11 @@ function tokenizeExpr(s){
     if(/[A-Za-z_]/.test(c)){
       var k=i;
       while(k<n&&/[A-Za-z0-9_]/.test(s[k]))k++;
+      // 容错：允许 Math.xxx 写法（如用户习惯写 Math.abs），后续统一按函数名解析
+      if(s[k]==='.'&&k+1<n&&/[A-Za-z_]/.test(s[k+1])){
+        k++;
+        while(k<n&&/[A-Za-z0-9_]/.test(s[k]))k++;
+      }
       out.push({t:'id',v:s.slice(i,k)});i=k;continue;
     }
     var m=false,q;
@@ -4040,7 +4045,7 @@ function evalFormula(formula,vars){
           next();var args=[];
           if(!isOp(')')){args.push(parseExpr());while(eat(','))args.push(parseExpr());}
           if(!eat(')'))throw new Error('expect )');
-          var fn=EXPR_FN[t.v];
+          var fn=EXPR_FN[t.v]||EXPR_FN[String(t.v).replace(/^Math\./,'')];
           if(!fn)throw new Error('unknown fn '+t.v);
           return fn.apply(Math,args);
         }
