@@ -63,18 +63,19 @@
     return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
   }
 
-  /* 解析网段：192.168.1.0/24 或 192.168.1.1-254 或单个 IP
+  /* 解析网段：192.168.1.0/24 或 192.168.1.0-255 或单个 IP
      ------------------------------------------------------------------
      opt.skipBc：是否剔除「网段地址」与「广播地址」。
-       /24 网段的 .0 是网段地址、.255 是广播地址，这两个地址永远不会分配给
-       任何一台主机，扫它们纯属浪费（每个都要等一个超时）。默认开启剔除，
-       实际扫描区间落在 .1~.254，共 254 个可用主机地址。
+       /24 网段的 .0 是网段地址、.255 是广播地址，按 TCP/IP 约定通常不会
+       分配给主机，扫它们多数是白等两次超时；但也有设备/固件不守约定误配了
+       这两个地址。因此【默认全包含 .0~.255 共 256 个地址，一个不漏】，
+       只有用户显式勾选「跳过 .0 与 .255」时才剔除（扫 .1~.254）。
        /31、/32（点对点 / 单主机）不存在这个约定，不做剔除。 */
   function parseRange(str, opt) {
     opt = opt || {};
-    var skipBc = opt.skipBc !== false;
+    var skipBc = opt.skipBc === true;   // 默认全包含，不跳过
     str = String(str || '').trim();
-    if (!str) return { err: '网段为空：请先点「探测本机 IP」自动填入，或手动填写（如 192.168.1.1-254）' };
+    if (!str) return { err: '网段为空：请先点「探测本机 IP」自动填入，或手动填写（如 192.168.1.0-255）' };
 
     var m = /^(\d+\.\d+\.\d+\.)\[?(\d{1,3})\-(\d{1,3})\]?$/.exec(str) ||
             /^(\d{1,3}\.\d{1,3}\.\d{1,3})\.(\d{1,3})\-(\d{1,3})$/.exec(str);
@@ -109,16 +110,16 @@
     }
 
     if (IPV4_RE.test(str)) return { ips: [str], skipped: 0 };
-    return { err: '格式示例：192.168.1.1-254 或 192.168.1.0/24 或 192.168.1.10' };
+    return { err: '格式示例：192.168.1.0-255 或 192.168.1.0/24 或 192.168.1.10' };
   }
 
-  /* 由已探测到的本机 IP 推断「可用主机区间」：192.168.1.1-254 */
+  /* 由已探测到的本机 IP 推断网段（全包含 .0~.255）：192.168.1.0-255 */
   function suggestRange() {
     for (var i = 0; i < S.localIPs.length; i++) {
       var r = S.localIPs[i];
       if (r && !r.mdns && IPV4_RE.test(r.ip || '')) {
         var s = r.ip.split('.');
-        return s[0] + '.' + s[1] + '.' + s[2] + '.1-254';
+        return s[0] + '.' + s[1] + '.' + s[2] + '.0-255';
       }
     }
     return '';
@@ -348,17 +349,16 @@
     box.innerHTML = h;
 
     if (real.length) {
-      // 直接填「可用主机区间」.1-254，而不是 .0/24：
-      // .0 是网段地址、.255 是广播地址，永远不会有主机，扫它们只是白等两个超时。
+      // 全包含：.0~.255 共 256 个地址，不预先剔除任何地址
       var seg = real[0].ip.split('.');
-      var guess = seg[0] + '.' + seg[1] + '.' + seg[2] + '.1-254';
+      var guess = seg[0] + '.' + seg[1] + '.' + seg[2] + '.0-255';
       var inp = $('ip-range');
       var old = inp ? String(inp.value || '').trim() : '';
       var isDefault = !old || /^\d{1,3}(\.\d{1,3}){3}$/.test(old) === false &&
                       (/^192\.168\.\d{1,3}\.0(\/24|-255)$/.test(old) || /^\d{1,3}\.\d{1,3}\.\d{1,3}\.0\/24$/.test(old));
       if (inp && (isDefault || !old)) inp.value = guess;
       var nets = {};
-      real.forEach(function (r) { var s = r.ip.split('.'); nets[s[0] + '.' + s[1] + '.' + s[2] + '.1-254'] = 1; });
+      real.forEach(function (r) { var s = r.ip.split('.'); nets[s[0] + '.' + s[1] + '.' + s[2] + '.0-255'] = 1; });
       var ks = Object.keys(nets);
       if (ks.length > 1) {
         box.insertAdjacentHTML('beforeend',
@@ -367,7 +367,7 @@
       }
       box.insertAdjacentHTML('beforeend',
         '<div class="ip-note ok">已按本机网段填入扫描范围 <b>' + esc(guess) +
-        '</b>（.1~.254 共 254 个可用主机地址，已自动跳过网段地址 .0 与广播地址 .255）。</div>');
+        '</b>（.0~.255 共 256 个地址，<b>全包含</b>）。想快一点可勾选「跳过 .0 与 .255」。</div>');
     }
   }
 
@@ -556,11 +556,11 @@
       var sug = suggestRange();
       if (sug) {
         rangeInp.value = sug;
-        window.ipScanMsg('网段为空，已自动使用本机网段 ' + sug + '（.1~.254）', false);
+        window.ipScanMsg('网段为空，已自动使用本机网段 ' + sug + '（.0~.255 全包含）', false);
       }
     }
     var skipEl = $('ip-skipbc');
-    var r = parseRange((rangeInp || {}).value, { skipBc: skipEl ? !!skipEl.checked : true });
+    var r = parseRange((rangeInp || {}).value, { skipBc: skipEl ? !!skipEl.checked : false });
     if (r.err) { window.ipScanMsg(r.err, true); return; }
     var ports = parsePorts(($('ip-ports') || {}).value);
     if (!ports.length) { window.ipScanMsg('请至少填写一个端口', true); return; }
