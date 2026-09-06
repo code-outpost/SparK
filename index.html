@@ -3244,9 +3244,11 @@ Model 101/103 单相/三相逆变器
           <b style="color:var(--acc)" data-page-node-id="gyUumPm2F3GB1CE1Ax8OPO">探测方式</b>：对每个 IP 并行探测多个端口（<code data-page-node-id="4YgSiU2UoBd32MIPhmGsm3">fetch</code> 通道）+ 抓取 favicon（图片通道），双保险判定在线。<br data-page-node-id="jghrLzPOtE2OOtgoGWskdL">
           <b style="color:var(--warn)" data-page-node-id="keL5ODDn2cfBUuN1HzECZ2">注意</b>：浏览器沙箱不能发 ICMP ping、不能做 ARP，只能做 HTTP 建连探测，
           因此只开放 SSH / Modbus-TCP / SMB 等非 HTTP 端口的设备扫不出来，也拿不到 MAC 与设备名。<br data-page-node-id="SkipBcBr01">
-          <b style="color:var(--info)" data-page-node-id="SkipBcB01">网段怎么填</b>：扫描范围按「<b style="color:var(--tx)" data-page-node-id="SkipBcB02">可用主机区间</b>」给，探测到本机是 <code data-page-node-id="SkipBcC01">192.168.1.20</code>
-          就自动填 <code data-page-node-id="SkipBcC02">192.168.1.1-254</code>——<b data-page-node-id="SkipBcB03">不是</b> <code data-page-node-id="SkipBcC03">.0-255</code>：
-          <code data-page-node-id="SkipBcC04">.0</code> 是网段地址、<code data-page-node-id="SkipBcC05">.255</code> 是广播地址，永远不会分配给主机，扫它们只会白等两次超时。若填 CIDR（<code data-page-node-id="SkipBcC06">192.168.1.0/24</code>）也会自动剥掉这两个地址。
+          <b style="color:var(--info)" data-page-node-id="SkipBcB01">网段怎么填</b>：默认<b style="color:var(--tx)" data-page-node-id="SkipBcB02">全包含</b>，探测到本机是 <code data-page-node-id="SkipBcC01">192.168.1.20</code>
+          就自动填 <b data-page-node-id="SkipBcB03"><code data-page-node-id="SkipBcC02">192.168.1.0-255</code></b>（共 256 个地址，<b>含</b> <code data-page-node-id="SkipBcC03">.0</code> 与 <code data-page-node-id="SkipBcC04">.255</code>）。<br data-page-node-id="SkipBcBr02">
+          <b style="color:var(--warn)" data-page-node-id="SkipBcB04">小知识</b>：<code data-page-node-id="SkipBcC05">.0</code> 是网段地址、<code data-page-node-id="SkipBcC06">.255</code> 是广播地址，
+          按 TCP/IP 约定<b>通常</b>不会分配给主机，所以扫它们多数是白等两次超时——但也存在个别设备/固件不守约定误配了这两个地址的情况，
+          因此<b style="color:var(--acc)" data-page-node-id="SkipBcB05">默认全扫，不漏</b>。想要快一点可勾选「跳过 .0 与 .255」，实际就只扫 .1~.254。填 CIDR（<code data-page-node-id="SkipBcC07">192.168.1.0/24</code>）同理，默认展开为全部 256 个地址。
         </div>
 
         <div class="card-title" data-page-node-id="UA4WBYdaCEjEfAugUjGNvH"><div class="dot" data-page-node-id="SMn8OevFDTjoxRYebazCjN"></div>① 本机（本电脑）的局域网 IP</div>
@@ -3260,7 +3262,7 @@ Model 101/103 单相/三相逆变器
         <div class="card-title" data-page-node-id="VAF1J1tEhUZddhEzFVGv08"><div class="dot" data-page-node-id="Y8ZRM7QUsDFD21svXcjiGf"></div>② 扫描同网段设备</div>
         <div class="frm frm4" style="margin-bottom:8px" data-page-node-id="TUjE9uIiksN0C4rkfeacP6">
           <div class="lbl" data-page-node-id="jEJppFTpYdkhH3bQDAkC25"><div class="lbl-txt" data-page-node-id="x8vU1J7HhMB9EbBvexr7dd">网段</div>
-            <input type="text" id="ip-range" value="" placeholder="点「探测本机 IP」自动填入，或手填 192.168.1.1-254" data-page-node-id="3i0n1EV1VnQ0Y8ysdrCFlR"></div>
+            <input type="text" id="ip-range" value="" placeholder="点「探测本机 IP」自动填入，或手填 192.168.1.0-255" data-page-node-id="3i0n1EV1VnQ0Y8ysdrCFlR"></div>
           <div class="lbl" data-page-node-id="0OeLluL1SamlL6MqMcx0yy"><div class="lbl-txt" data-page-node-id="ikRvIJ6KTgq21A8I5lJRJA">端口（逗号 / 起止范围，越靠前越先探测）</div>
             <input type="text" id="ip-ports" value="80,443,8080,8443,8000,8008,8081,8888,5000,5001,37777,9100,631" placeholder="80,443,8080" data-page-node-id="ly3filoBZOSgKr5TE5ToIT"></div>
           <div class="lbl" data-page-node-id="sd7DlUbK24jhQuagHlEzsf"><div class="lbl-txt" data-page-node-id="YBEHvMBCFICHIcMqQ2lM2w">主机并发</div>
@@ -3283,8 +3285,8 @@ Model 101/103 单相/三相逆变器
               抓取设备图标（favicon，辅助识别品牌）</label></div>
           <div class="lbl" data-page-node-id="SkipBcLbl01"><div class="lbl-txt" data-page-node-id="SkipBcTxt01">扫描范围</div>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);height:100%" data-page-node-id="SkipBcWrap01">
-              <input type="checkbox" id="ip-skipbc" checked style="width:15px;height:15px;accent-color:var(--acc)" data-page-node-id="SkipBcChk01">
-              跳过网段地址 .0 与广播地址 .255（只扫 .1~.254）</label></div>
+              <input type="checkbox" id="ip-skipbc" style="width:15px;height:15px;accent-color:var(--acc)" data-page-node-id="SkipBcChk01">
+              跳过 .0 与 .255（只扫 .1~.254，追求速度时勾）</label></div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" data-page-node-id="WoBFGCdBOZZIGrvDaQHQ44">
           <button class="btn btn-pri btn-sm" onclick="ipScanStart()" data-page-node-id="YBl2j9LKqGNshq8JF7Y0HT">开始扫描</button>
