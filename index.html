@@ -602,6 +602,23 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
 .ip-row-dead{opacity:.5}
 .ip-open{font-size:calc(11px*var(--fs,1));color:var(--acc);text-decoration:none;border:1px solid var(--acc4);border-radius:5px;padding:2px 8px;background:var(--acc3);white-space:nowrap}
 .ip-open:hover{background:var(--acc4)}
+/* ---- 网段图：一个格子一个地址，颜色即状态 ---- */
+.ip-map-cap{font-size:calc(11px*var(--fs,1));color:var(--tx2);margin:2px 0 8px;line-height:1.7}
+.ip-map-cap b{color:var(--tx)}
+.ip-map-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;font-size:calc(11px*var(--fs,1));color:var(--tx3)}
+.ip-lg{display:inline-flex;align-items:center;gap:5px}
+.ip-lg .ip-cell{width:11px;height:11px;border-radius:3px;font-size:0;cursor:default}
+.ip-cell{display:flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid transparent;cursor:pointer;user-select:none;font-family:var(--mono),monospace;font-weight:700;transition:transform .12s ease,box-shadow .12s ease;overflow:hidden;min-width:0}
+.ip-map{display:grid;grid-template-columns:repeat(16,1fr);gap:4px}
+.ip-map .ip-cell{aspect-ratio:1/1;font-size:calc(9px*var(--fs,1))}
+.ip-map .ip-cell:hover{transform:scale(1.2);z-index:2;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.ip-cell.s-self{background:var(--info);color:var(--bg);border-color:var(--info)}
+.ip-cell.s-gw{background:var(--warn);color:var(--bg);border-color:var(--warn)}
+.ip-cell.s-dev{background:var(--ok);color:var(--bg);border-color:var(--ok)}
+.ip-cell.s-remote{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.ip-cell.s-apipa{background:var(--tx3);color:var(--bg);border-color:var(--tx3)}
+.ip-cell.s-dead{background:var(--bg3);color:var(--tx3);border-color:var(--bd);opacity:.75}
+.ip-cell.s-pending{background:transparent;color:var(--tx3);border-color:var(--bd);border-style:dashed;opacity:.55}
 .tb-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
 .tb-cbtn{font-size:calc(11px*var(--fs,1));padding:5px 12px;border-radius:100px;background:var(--bg);border:1px solid var(--bd);color:var(--tx2);cursor:pointer;transition:all .15s ease;font-family:inherit}
 .tb-cbtn:hover{border-color:var(--acc4);color:var(--acc)}
@@ -3242,6 +3259,7 @@ Model 101/103 单相/三相逆变器
           <b style="color:var(--warn)" data-page-node-id="g6ZuQuR8peBSLui9r8uK26">网关</b> / <b style="color:var(--ok)" data-page-node-id="c88CPFbuHXsn0OSI3zQNiT">接入设备</b> / <b style="color:var(--tx3)" data-page-node-id="4FyhkqHmKGnkdKRsMoDyDZ">离线</b>
           着色区分，支持筛选排序与图标识别。<br data-page-node-id="ttviXEVoGDHtv7K3LA7etl">
           <b style="color:var(--acc)" data-page-node-id="gyUumPm2F3GB1CE1Ax8OPO">探测方式</b>：对每个 IP 并行探测多个端口（<code data-page-node-id="4YgSiU2UoBd32MIPhmGsm3">fetch</code> 通道）+ 抓取 favicon（图片通道），双保险判定在线。<br data-page-node-id="jghrLzPOtE2OOtgoGWskdL">
+          <b style="color:var(--acc)" data-page-node-id="MapViewIntro01">网段图</b>：结果工具条可切换「列表 / 网段图」，网段图一格一个地址、颜色即状态（本机蓝 / 网关橙 / 接入设备绿 / 跨网段强调色 / 无响应暗 / 未扫描虚线），扫一眼就知道哪些地址可用，点在线格子直接打开它的网页。<br data-page-node-id="MapViewIntro02">
           <b style="color:var(--warn)" data-page-node-id="keL5ODDn2cfBUuN1HzECZ2">注意</b>：浏览器沙箱不能发 ICMP ping、不能做 ARP，只能做 HTTP 建连探测，
           因此只开放 SSH / Modbus-TCP / SMB 等非 HTTP 端口的设备扫不出来，也拿不到 MAC 与设备名。<br data-page-node-id="SkipBcBr01">
           <b style="color:var(--info)" data-page-node-id="SkipBcB01">网段怎么填</b>：默认<b style="color:var(--tx)" data-page-node-id="SkipBcB02">全包含</b>，探测到本机是 <code data-page-node-id="SkipBcC01">192.168.1.20</code>
@@ -3488,7 +3506,7 @@ Model 101/103 单相/三相逆变器
 <script src="layout.js?v=20260829-4"></script>
 <script src="cmdgen.js?v=20260829-5"></script>
 <script src="music.js?v=20260829-6"></script>
-<script src="ipscan.js?v=20260906-2"></script>
+<script src="ipscan.js?v=20260907-1"></script>
 <script src="toolbox.js?v=20260906-2"></script>
 <script>
 /* 启动页 + 自我介绍页切换 */
