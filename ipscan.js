@@ -1,5 +1,5 @@
 /* =========================================================================
-   SparK · 局域网 IP 扫描  ipscan.js  (v20260906-2)
+   SparK · 局域网 IP 扫描  ipscan.js  (v20260907-1)
    -------------------------------------------------------------------------
    交互与结果呈现对齐 Advanced IP Scanner / Angry IP Scanner：
      状态灯 · 图标 · IP · 分类 · 开放端口 · 响应时间 · 推测类型 · 打开
@@ -39,6 +39,8 @@
     filter: 'all',    // all | alive | dead | self | gw | dev | remote | apipa
     sortKey: 'ip',    // ip | ms
     sortDir: 1,
+    view: 'list',     // list | map（网段图）
+    ips: [],          // 本次扫描的完整地址清单，供网段图铺格子
     lastRender: 0
   };
 
@@ -50,6 +52,27 @@
     });
   }
   function now() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+
+  /* 复制文本：优先 Clipboard API，失败回退 execCommand
+     （file:// 下 navigator.clipboard 常不可用，必须留这条兜底） */
+  function copyText(txt, okMsg) {
+    function ok() { window.ipScanMsg(okMsg || '已复制到剪贴板', false); }
+    function fallback() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        var r = document.execCommand('copy');
+        ta.parentNode && ta.parentNode.removeChild(ta);
+        r ? ok() : window.ipScanMsg('复制失败，请手动复制', true);
+      } catch (e) { window.ipScanMsg('复制失败：' + (e && e.message || e), true); }
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(ok, fallback);
+      } else fallback();
+    } catch (e) { fallback(); }
+  }
   function clamp(v, lo, hi) { v = Number(v); if (!isFinite(v)) return lo; return Math.max(lo, Math.min(hi, v)); }
 
   var IPV4_RE = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
@@ -430,7 +453,17 @@
     h += '<span class="ip-tb-sep"></span>';
     h += '<button class="ip-fbtn' + (S.sortKey === 'ip' ? ' on' : '') + '" onclick="ipSetSort(\'ip\')">按 IP ' + (S.sortKey === 'ip' ? (S.sortDir > 0 ? '↑' : '↓') : '') + '</button>';
     h += '<button class="ip-fbtn' + (S.sortKey === 'ms' ? ' on' : '') + '" onclick="ipSetSort(\'ms\')">按响应 ' + (S.sortKey === 'ms' ? (S.sortDir > 0 ? '↑' : '↓') : '') + '</button>';
+    h += '<span class="ip-tb-sep"></span>';
+    h += '<button class="ip-fbtn' + (S.view === 'list' ? ' on' : '') + '" onclick="ipSetView(\'list\')">列表</button>';
+    h += '<button class="ip-fbtn' + (S.view === 'map' ? ' on' : '') + '" onclick="ipSetView(\'map\')">网段图</button>';
     h += '</div>';
+
+    /* 网段图视图：一个格子一个地址，颜色即状态 */
+    if (S.view === 'map') {
+      h += renderMap();
+      box.innerHTML = h;
+      return;
+    }
 
     var rows = visibleRows();
     if (!rows.length) {
@@ -478,6 +511,90 @@
     }
     box.innerHTML = h;
   }
+
+  /* ---------------------------------------------------------------- 网段图
+     一个格子 = 一个地址，颜色即状态，扫完一眼看出哪些可用。
+     未扫描的地址也铺出来（虚线格），所以扫描过程中能看到推进进度。 */
+  var MAP_COLS = 16;   // /24 正好 16×16 = 256 格
+
+  function renderMap() {
+    var i;
+    var ips = (S.ips && S.ips.length) ? S.ips : [];
+    if (!ips.length) {
+      // 还没开始扫时用已有结果兜底（例如从列表视图切过来）
+      ips = S.results.map(function (r) { return r.ip; }).concat(S.dead);
+      ips.sort(function (a, b) { return ip2int(a) - ip2int(b); });
+    }
+    if (!ips.length) {
+      return '<div class="rst-empty">暂无地址。先填网段再点「开始扫描」。</div>';
+    }
+
+    var st = {};
+    for (i = 0; i < S.results.length; i++) st[S.results[i].ip] = S.results[i];
+    var deadSet = {};
+    for (i = 0; i < S.dead.length; i++) deadSet[S.dead[i]] = true;
+
+    var first = ips[0], last = ips[ips.length - 1];
+    var h = '<div class="ip-map-cap">网段 <b>' + esc(first) + ' ~ ' + esc(last) +
+            '</b>　共 ' + ips.length + ' 个地址' +
+            '　·　在线 <b style="color:var(--ok)">' + S.results.length + '</b>' +
+            '　·　无响应 ' + S.dead.length +
+            '　·　未扫 ' + (ips.length - S.results.length - S.dead.length) + '</div>';
+
+    var legend = [
+      ['s-self', '本机'], ['s-gw', '网关'], ['s-dev', '接入设备'],
+      ['s-remote', '跨网段'], ['s-apipa', 'APIPA'], ['s-dead', '无响应'], ['s-pending', '未扫描']
+    ];
+    h += '<div class="ip-map-legend">';
+    legend.forEach(function (l) {
+      h += '<span class="ip-lg"><i class="ip-cell ' + l[0] + '"></i>' + l[1] + '</span>';
+    });
+    h += '</div>';
+
+    h += '<div class="ip-map">';
+    for (i = 0; i < ips.length; i++) {
+      var ip = ips[i];
+      var r = st[ip];
+      var cls, tip;
+      if (r) {
+        var k = KIND[r.kind] || KIND.dev;
+        cls = 's-' + r.kind;
+        tip = ip + ' · ' + k.label +
+          (r.ports.length ? ' · 端口 ' + r.ports.map(function (p) { return p.port; }).join(',') : '') +
+          (r.ms ? ' · ' + r.ms + 'ms' : '') +
+          ' · 点击打开';
+      } else if (deadSet[ip]) {
+        cls = 's-dead';
+        tip = ip + ' · 无响应（未开放 HTTP 端口，或不在本机网段）· 点击复制 IP';
+      } else {
+        cls = 's-pending';
+        tip = ip + ' · 尚未扫描';
+      }
+      h += '<div class="ip-cell ' + cls + '" title="' + esc(tip) + '"' +
+           ' onclick="ipMapClick(\'' + esc(ip) + '\')">' + ip.split('.').pop() + '</div>';
+    }
+    h += '</div>';
+    h += '<div class="hint" style="margin-top:8px">格子内数字是 IP 末段；鼠标悬停看详情，' +
+         '点在线格子直接打开它的网页，点其它格子复制该 IP。</div>';
+    return h;
+  }
+
+  window.ipSetView = function (v) {
+    S.view = (v === 'map') ? 'map' : 'list';
+    renderResults(true);
+  };
+
+  /* 点格子：在线且有端口就打开网页，否则复制 IP */
+  window.ipMapClick = function (ip) {
+    var r = null, i;
+    for (i = 0; i < S.results.length; i++) { if (S.results[i].ip === ip) { r = S.results[i]; break; } }
+    if (r && r.ports.length) {
+      var u = (r.ports[0].scheme === 'https' ? 'https' : 'http') + '://' + ip + ':' + r.ports[0].port + '/';
+      window.open(u, '_blank', 'noopener');
+      return;
+    }
+    copyText(ip, '已复制 ' + ip);
+  };
 
   /* ------------------------------------------------------ 单机扫描逻辑 */
   function scanHost(ip, ports, discCount, timeout, innerConc, useIcon) {
@@ -573,6 +690,7 @@
 
     S.running = true; S.abort = false;
     S.results = []; S.dead = []; S.scanned = 0; S.total = r.ips.length; S.t0 = now();
+    S.ips = r.ips.slice();   // 网段图按这份清单铺格子（含未扫描的）
     if (r.skipped) {
       window.ipScanMsg('已跳过 ' + r.skipped + ' 个不可分配地址（网段地址 / 广播地址），实际扫描 ' +
                        r.ips.length + ' 个可用主机地址。', false);
@@ -627,7 +745,7 @@
   };
 
   window.ipScanClear = function () {
-    S.results = []; S.dead = []; S.scanned = 0; S.total = 0;
+    S.results = []; S.dead = []; S.scanned = 0; S.total = 0; S.ips = [];
     renderResults(true);
     setProgress(0, '');
     window.ipScanMsg('', false);
@@ -704,21 +822,7 @@
 
   window.ipCopyResult = function () {
     if (!S.results.length && !S.dead.length) { window.ipScanMsg('没有可复制的结果', true); return; }
-    var txt = buildText();
-    function ok() { window.ipScanMsg('已复制到剪贴板', false); }
-    function fallback() {
-      try {
-        var ta = document.createElement('textarea');
-        ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
-        document.body.appendChild(ta); ta.select();
-        var r = document.execCommand('copy');
-        ta.remove();
-        r ? ok() : window.ipScanMsg('复制失败，请手动选中结果', true);
-      } catch (e) { window.ipScanMsg('复制失败：' + (e && e.message || e), true); }
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(txt).then(ok, fallback);
-    } else fallback();
+    copyText(buildText(), '已复制扫描结果');
   };
 
   /* --------------------------------------------------------------- 初始化 */
