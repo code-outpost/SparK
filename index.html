@@ -880,6 +880,13 @@ input[type=range]{accent-color:var(--acc);width:200px;cursor:pointer}
           <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" data-page-node-id="yBU9Abgs8Iv2DpjjmgPErc"><rect x="2" y="4.5" width="12" height="8.5" rx="1.5" data-page-node-id="qG3ZpmDmuGYS4J0kMrkAsy"/><path d="M5.5 4.5V3.2a.7.7 0 0 1 .7-.7h3.6a.7.7 0 0 1 .7.7v1.3" stroke-linecap="round" data-page-node-id="9oxpth3hFJtEQFoyxARLAi"/><path d="M6 8.5h4" stroke-linecap="round" data-page-node-id="DMCfTFUHXrvuRWqQ6758pS"/></svg>测试工具集合</div>
       </nav>
       </div>
+      <div class="nav-group" data-page-node-id="examNavGrp">
+        <div class="nav-sec" onclick="toggleNavGroup(this)" data-page-node-id="examNavSec"><span class="ns-t" data-page-node-id="examNavT">考证学习</span><span class="caret" data-page-node-id="examNavCaret"></span></div>
+        <nav class="nav-body" data-page-node-id="examNavBody">
+          <div class="nav-item" data-sect="exam" onclick="nav(this,'exam')" data-page-node-id="examNavItem">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" data-page-node-id="examNavIcon"><path d="M3 3h7l3 3v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke-linejoin="round" data-page-node-id="examNavIc1"/><path d="M5.2 7h4.6M5.2 10h2.8" stroke-linecap="round" data-page-node-id="examNavIc2"/></svg>电工证考试题库</div>
+        </nav>
+      </div>
       <div class="nav-group" data-page-node-id="F4pnn6OqKhOdNkvsjD0HmN">
         <div class="nav-sec" onclick="toggleNavGroup(this)" data-page-node-id="0IftVSngNpcRhb1qAhLSFF"><span class="ns-t" data-page-node-id="2mSUCjMWkQMsJZXv8y1ARt">系统</span><span class="caret" data-page-node-id="zfQLVQGJB4AqAUFWpvBHaO"></span></div>
       <nav class="nav-body" data-page-node-id="7UJVCn0b17Xo11TIWW4fbj">
@@ -3412,8 +3419,7 @@ Model 101/103 单相/三相逆变器
           <div class="set-row" data-page-node-id="b7HLOH6dB7ojTLTO6s9tef"><div data-page-node-id="UM1iKimKADrDZTZS7ANSG2"><div class="set-name" data-page-node-id="OTubsJke1LpczPxO8ni4OZ">天气默认城市</div><div class="set-desc" data-page-node-id="LKe97mFxES6OmCEraQ95hD">留空时用浏览器定位；若不允许定位或本地打开，可填城市名（如 上海 / 松江）保证天气可用</div></div><div style="display:flex;align-items:center;gap:8px;flex:1;max-width:360px" data-page-node-id="9IUafcoWTCBqtQBvXMPuqO"><input type="text" id="weatherCity" placeholder="选填，如 上海" style="font-size:11px;flex:1" onchange="saveWeather()" data-page-node-id="VlDyIReCUDQ81fLNXJBSB6"><button class="btn btn-pri btn-sm" onclick="saveWeather()" data-page-node-id="ED72uk9nFKUKcrFjucQuuv">刷新天气</button></div></div>
           <div class="sep" data-page-node-id="CoQ2mGf2mVfzI9DygAnOBh"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap" data-page-node-id="BrMkkGQ23U8Ch9qj74WhH7"><button class="btn btn-pri" onclick="resetSettings()" data-page-node-id="G8i0GxFxNfEAUCchYp4a1U">恢复默认设置</button></div>
-          <div class="hint" data-page-node-id="ocZF7X8uBdSM5EwQky8j3d">设置自动保存到本地浏览器（localStorage），下次打开仍生效。</div>
-        </div>
+      </div>
         <div class="card" data-page-node-id="caKDwGLFa8cKHUSyF65IC0">
           <div class="card-title" data-page-node-id="QotupfFWPzisZjKeRX3sch"><div class="dot" data-page-node-id="K0Qaglu6znEOWDT6doIqZ0"></div>背景音乐</div>
           <div class="set-row" data-page-node-id="CLy9tGFGTYvQ0oSXhXOPmv"><div data-page-node-id="3iIEVmFkCdIouUT1pkbqjQ"><div class="set-name" data-page-node-id="qWBtWrfeXD5EMWyAmLF1xH">开启背景音乐</div><div class="set-desc" data-page-node-id="DKlzlnjBDuWbUHuFyxS2k6">开启后页面底部出现播放条，作为背景音乐随机播放</div></div>
@@ -3447,6 +3453,103 @@ Model 101/103 单相/三相逆变器
       </div>
     </div>
 
+
+    <!-- ============ 电工证考试题库 ============ -->
+    <div class="sect" id="s-exam" data-page-node-id="examSect">
+      <style>
+        #s-exam .exam-intro{font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:12px}
+        #s-exam .exam-intro b{color:var(--acc)}
+        #s-exam .exam-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+        #s-exam .exam-modes{display:flex;gap:8px}
+        #s-exam .exam-mode{padding:7px 16px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);
+          background:var(--bg2);color:var(--tx2);font-size:12px;font-weight:600;transition:all .15s}
+        #s-exam .exam-mode:hover{color:var(--acc);border-color:var(--acc4)}
+        #s-exam .exam-mode.on{background:var(--acc);color:#000;border-color:var(--acc)}
+        #s-exam .exam-meta{font-size:11px;color:var(--tx3);font-family:var(--mono)}
+        #s-exam .exam-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+        #s-exam .exam-cat{padding:5px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);
+          background:var(--bg2);color:var(--tx2);font-size:11px;transition:all .15s}
+        #s-exam .exam-cat:hover{color:var(--acc);border-color:var(--acc4)}
+        #s-exam .exam-cat.on{background:var(--acc3);color:var(--acc);border-color:var(--acc4)}
+        #s-exam .exam-import{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:12px 14px;margin-bottom:12px}
+        #s-exam .exam-imp-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        #s-exam .exam-imp-have{font-size:11px;color:var(--acc);font-family:var(--mono)}
+        #s-exam .exam-imp-t{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px}
+        #s-exam .exam-imp-tip{font-size:11.5px;color:var(--tx2);line-height:1.75;margin-bottom:10px}
+        #s-exam .exam-imp-tip b{color:var(--acc)}
+        #s-exam .exam-imp-ta{width:100%;min-height:130px;box-sizing:border-box;background:var(--bg);color:var(--tx);
+          border:1px solid var(--bd);border-radius:7px;padding:10px 12px;font-size:12px;line-height:1.6;
+          font-family:var(--mono);resize:vertical;outline:none}
+        #s-exam .exam-imp-ta:focus{border-color:var(--acc)}
+        #s-exam .exam-imp-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+        #s-exam .exam-imp-file{display:inline-flex;align-items:center;padding:7px 13px;border-radius:7px;
+          border:1px dashed var(--bd);background:var(--bg3);color:var(--tx2);font-size:12px;cursor:pointer;transition:all .15s}
+        #s-exam .exam-imp-file:hover{border-color:var(--acc4);color:var(--acc)}
+        #s-exam .exam-imp-file input{display:none}
+        #s-exam .exam-imp-msg{margin-top:9px;font-size:12px;line-height:1.6}
+        #s-exam .exam-imp-msg .ok{color:var(--ok)}
+        #s-exam .exam-imp-msg .bad{color:var(--err)}
+        #s-exam .exam-imp-msg b{color:var(--acc)}
+        #s-exam .exam-imp-warn{margin-top:8px;font-size:11px;color:var(--tx3);line-height:1.6}
+        #s-exam .exam-actions{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+        #s-exam .exam-done{font-size:11px;color:var(--tx3);font-family:var(--mono)}
+        #s-exam .exam-q{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:13px 14px;margin-bottom:10px}
+        #s-exam .exam-q-head{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap}
+        #s-exam .exam-q-type{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;color:#000}
+        #s-exam .t-judge{background:var(--info)}
+        #s-exam .t-single{background:var(--acc)}
+        #s-exam .t-multi{background:var(--ok)}
+        #s-exam .exam-q-cat{font-size:10px;color:var(--tx3)}
+        #s-exam .exam-q-no{margin-left:auto;font-size:10px;color:var(--tx3);font-family:var(--mono)}
+        #s-exam .exam-q-text{font-size:13px;color:var(--tx);line-height:1.6;margin-bottom:10px;font-weight:500}
+        #s-exam .exam-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        @media(max-width:560px){#s-exam .exam-opts{grid-template-columns:1fr}}
+        #s-exam .exam-opt{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:7px;border:1px solid var(--bd);
+          background:var(--bg3);color:var(--tx2);cursor:pointer;text-align:left;font-size:12px;transition:all .15s}
+        #s-exam .exam-opt:hover{border-color:var(--acc4);color:var(--tx)}
+        #s-exam .exam-opt-lab{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--bg);
+          border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--tx2)}
+        #s-exam .exam-opt.chosen{border-color:var(--acc);background:var(--acc3);color:var(--tx)}
+        #s-exam .exam-opt.chosen .exam-opt-lab{background:var(--acc);color:#000;border-color:var(--acc)}
+        #s-exam .exam-opt.right{border-color:var(--ok);background:rgba(16,185,129,.12);color:var(--tx)}
+        #s-exam .exam-opt.right .exam-opt-lab{background:var(--ok);color:#000;border-color:var(--ok)}
+        #s-exam .exam-opt.wrong{border-color:var(--err);background:rgba(239,68,68,.12);color:var(--tx)}
+        #s-exam .exam-opt.wrong .exam-opt-lab{background:var(--err);color:#fff;border-color:var(--err)}
+        #s-exam .exam-result{margin-top:10px;font-size:12px;font-weight:600}
+        #s-exam .exam-result.ok{color:var(--ok)}
+        #s-exam .exam-result.bad{color:var(--err)}
+        #s-exam .exam-exp{margin-top:6px;font-size:11.5px;line-height:1.65;color:var(--tx2);background:var(--bg);
+          border-left:2px solid var(--acc3);padding:8px 10px;border-radius:0 6px 6px 0}
+        #s-exam .exam-exp b{color:var(--acc)}
+        #s-exam .exam-card{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:22px;text-align:center}
+        #s-exam .exam-start-t{font-size:18px;font-weight:700;color:var(--tx);margin-bottom:10px}
+        #s-exam .exam-start-d{font-size:12px;color:var(--tx2);line-height:1.8;max-width:560px;margin:0 auto 16px}
+        #s-exam .exam-start-d b{color:var(--acc)}
+        #s-exam .exam-start-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+        #s-exam .exam-quiz-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+          background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:12px;flex-wrap:wrap}
+        #s-exam .exam-prog{font-size:12px;color:var(--tx)}
+        #s-exam .exam-prog b{color:var(--acc);font-size:15px}
+        #s-exam .exam-timer{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--ok)}
+        #s-exam .exam-timer.warn{color:var(--err)}
+        #s-exam .exam-ans-count{font-size:11px;color:var(--tx3);font-family:var(--mono)}
+        #s-exam .exam-quiz-nav{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+        #s-exam .exam-score{font-size:46px;font-weight:800;line-height:1}
+        #s-exam .exam-score.ok{color:var(--ok)}
+        #s-exam .exam-score.bad{color:var(--err)}
+        #s-exam .exam-score-sub{font-size:12px;color:var(--tx2);margin:8px 0 14px}
+        #s-exam .exam-review-h{text-align:left;font-size:13px;font-weight:600;color:var(--tx);margin:18px 0 10px;
+          padding-bottom:8px;border-bottom:1px solid var(--bd)}
+      </style>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>上海市低压电工作业 · 理论考试题库</div>
+        <div class="exam-intro">
+          依据《特种作业人员安全技术培训考核管理规定》及低压电工作业考核要点整理，共 <b>135</b> 题，覆盖法规、基础、电气安全、接地接零、仪表、线路、电器电机、变压器、消防防雷、作业技术等十大类。
+          <b>练习模式</b>按分类刷题、即点即看解析；<b>模拟考试</b>随机抽 100 题、限时 120 分钟，交卷出成绩并逐题回顾错题。
+        </div>
+        <div id="exam-body" data-page-node-id="examBody"></div>
+      </div>
+    </div>
     <!-- ============ 关于 ============ -->
     <div class="sect" id="s-about" data-page-node-id="2JngKQKZlNiUKw76ZATy1k">
       <div class="card" style="margin-bottom:14px" data-page-node-id="XhuEnhpGJkSmSgqht24qkD">
@@ -3508,6 +3611,8 @@ Model 101/103 单相/三相逆变器
 <script src="music.js?v=20260829-6"></script>
 <script src="ipscan.js?v=20260907-1"></script>
 <script src="toolbox.js?v=20260906-2"></script>
+<script src="examimport.js?v=20260909-1"></script>
+<script src="exam.js?v=20260909-1"></script>
 <script>
 /* 启动页 + 自我介绍页切换 */
 (function(){
