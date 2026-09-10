@@ -221,7 +221,8 @@
   var RE_ANS3 = /[（(]\s*([A-Da-d]{1,4})\s*[）)]\s*$/;          // 行尾 （B）
   var RE_ANS4 = /[（(]\s*([A-Da-d]{1,4})\s*[）)]/;              // 任意 （B）
   var RE_EXP  = /(?:【\s*解析\s*】|【\s*解释\s*】|解析\s*[：:])\s*([\s\S]*)$/;
-  var RE_TYPE = /[【\[（(]\s*(单选题|多选题|判断题|单项选择|多项选择|判断)\s*[】\]）)]/;
+  // 题型标记（含「单选 / 多选」这类不带「题」字的写法）
+  var RE_TYPE = /[【\[（(]\s*(单选题|多选题|判断题|单项选择题|多项选择题|单项选择|多项选择|单选|多选|判断)\s*[】\]）)]/;
   var RE_CAT_LINE = /^\s*[（(【\[]?\s*([一二三四五六七八九十百]+[、.．]|[A-Za-z]\s*[、.．])?\s*([\u4e00-\u9fa5A-Za-z0-9（）()·\/＋+\-—\s]{2,20}?)\s*[】\]）)]?\s*$/;
 
   // 字符位置 -> 0 基行号
@@ -320,18 +321,46 @@
     var ma = body.match(RE_ANS1) || body.match(RE_ANS2);
     if (ma) { ansRaw = ma[1]; body = body.replace(ma[0], ' '); }
     if (!ansRaw) {
-      // 仅在块尾 40 字内找「（B）」式答案，避免题干里的（A）被误当成答案
-      var tail = body.slice(-40);
-      var ma3 = tail.match(RE_ANS3) || tail.match(RE_ANS4);
+      // ① 先在「题干区」（第一个选项行之前）找「（B）」——很多题库把答案写在题干行尾。
+      //    这样既不会因为答案不在块尾而漏判，也不会把选项行误当成答案区。
+      var bl = body.split('\n'), optStart = -1;
+      for (var li = 0; li < bl.length; li++) {
+        var sl = trim(bl[li]);
+        if (!sl) continue;
+        if (/^[（(【\[]?[A-Da-d][）)】\]]?\s*[、.．､,，:：]/.test(sl)) { optStart = li; break; }
+      }
+      var stem = (optStart > 0) ? bl.slice(0, optStart).join('\n') : (optStart === 0 ? '' : body);
+      var ma3 = stem ? (stem.match(RE_ANS3) || stem.match(RE_ANS4)) : null;
       if (ma3) {
         ansRaw = ma3[1];
-        body = body.slice(0, body.length - tail.length) + tail.replace(ma3[0], ' ');
+        body = body.slice(0, ma3.index) + ' ' + body.slice(ma3.index + ma3[0].length);
+      }
+    }
+    if (!ansRaw) {
+      // ② 退回块尾 40 字内找「（B）」式答案（无选项行 / 答案在末尾的场景）
+      var tail = body.slice(-40);
+      var ma4 = tail.match(RE_ANS3) || tail.match(RE_ANS4);
+      if (ma4) {
+        ansRaw = ma4[1];
+        body = body.slice(0, body.length - tail.length) + tail.replace(ma4[0], ' ');
       }
     }
     // 判断题行尾 ✔/✘
     if (!ansRaw) {
       var mj = body.match(/[（(【\[]\s*([✔√✘×对错])\s*[）)】\]]/);
       if (mj) { ansRaw = mj[1]; body = body.replace(mj[0], ' '); }
+    }
+    // 无括号的对/错符号：「…630A。×小于」「…为FU。√」
+    // 仅在"不像选择题"（无 A、/B、 选项行）时启用，且符号后不能紧跟数字（避开 √3 / 2×3）
+    if (!ansRaw && !/^[ \t]*[（(【\[]?[A-Da-d][）)】\]]?\s*[、.．､,，:：]/m.test(body)) {
+      var mj2 = body.match(/[。．.；;）)]\s*([×✘√✔])(?![0-9０-９])/);
+      if (mj2) {
+        ansRaw = mj2[1];
+        // 符号后的同行文字是提示/解析（如「…630A。×小于」），移入解析字段，避免污染题干
+        var rest = trim(body.slice(mj2.index + mj2[0].length).split('\n')[0]);
+        body = body.slice(0, mj2.index) + mj2[0].charAt(0);
+        if (!exp && rest && rest.length <= 30) exp = rest;
+      }
     }
     // 独立成行的纯字母答案（多选题常见写法：选项后另起一行只有 "ABCD"）
     if (!ansRaw) {
@@ -344,6 +373,26 @@
     body.split('\n').forEach(function (ln) {
       var s = trim(ln);
       if (!s) return;
+      // ⑤ 单行「空格分隔」选项：A 文本 B 文本 C 文本 D 文本
+      //    仅当题型已明确为单选/多选，且本行含 ≥2 个「空白+字母+空白」分隔时启用，
+      //    避免与「A、文本」（顿号分隔）等常规写法冲突。答案标记已先行剥离，故安全。
+      if (typeHint === 'single' || typeHint === 'multi') {
+        var spc = s.match(/[ \t\u3000]+[A-Da-d][ \t\u3000]+/g);
+        if (spc && spc.length >= 2) {
+          var spl = s.split(/[ \t\u3000]+([A-Da-d])[ \t\u3000]+/);
+          var gotS = 0;
+          for (var spi = 1; spi < spl.length; spi += 2) {
+            var lk = spl[spi].toLowerCase();
+            var lv = trim(spl[spi + 1] || '');
+            if (lv) { opts[lk] = lv; gotS++; }
+          }
+          if (gotS >= 2) {
+            var pre = trim(spl[0]);
+            if (pre) qLines.push(pre);
+            return;
+          }
+        }
+      }
       // ① 一行挤了多个选项："A、最低 B、最高 C、平均"（必须优先于单选项判定，
       //    否则整行会被当成一个 A 选项）
       var keys = s.match(/[（(【\[]?[A-Da-d][）)】\]]?\s*[、.．､,，:：]/g) || [];
@@ -366,14 +415,38 @@
         opts[mo[1].toLowerCase()] = trim(mo[2]);
         return;
       }
+      // ③ 无分隔符选项行："A直击雷"（部分站点写成 Axxx，字母后没有顿号）。
+      //    仅在题型已明确为单选/多选时启用，避免把 "A相用红色标记" 这类题干误判成选项。
+      if (typeHint === 'single' || typeHint === 'multi') {
+        var mn = s.match(/^[（(【\[]?\s*([A-Da-d])\s*[）)】\]]?[ \t\u3000]*(\S.{0,58})$/);
+        if (mn && trim(mn[2])) { opts[mn[1].toLowerCase()] = trim(mn[2]); return; }
+      }
+      // ④ 选项无分隔符挤在题干同一行：「…互绞()圈A1B3」「…为()5A105B120C90」
+      //    「…依据是()oA用电流表测量B用摇表测量C用电笔验电」
+      //    要求 A→B（→C→D）依次出现，且选项内容不含 A-D，避免把题干里的字母误切
+      var RE_SQUEEZE = /^([\s\S]*?)[（(]?A[）)]?\s*([^A-Da-d]{1,20})[（(]?B[）)]?\s*([^A-Da-d]{1,20})(?:[（(]?C[）)]?\s*([^A-Da-d]{1,20}))?(?:[（(]?D[）)]?\s*([^A-Da-d]{1,20}))?\s*$/;
+      var mq = s.match(RE_SQUEEZE);
+      if (mq && trim(mq[2]) && trim(mq[3])) {
+        var stemS = trim(mq[1]);
+        // 题干必须有一定长度，否则整行就是选项本身（那由 ①②③ 处理）
+        if (stemS.length >= 6) {
+          opts.a = trim(mq[2]); opts.b = trim(mq[3]);
+          if (mq[4] && trim(mq[4])) opts.c = trim(mq[4]);
+          if (mq[5] && trim(mq[5])) opts.d = trim(mq[5]);
+          qLines.push(stemS);
+          return;
+        }
+      }
       qLines.push(s);
     });
 
     var q = trim(qLines.join(' '));
     if (!q) return null;
 
-    // 判断题题干里可能残留括号答案
-    if (/判/.test(typeHint) || (!Object.keys(opts).length && ansRaw)) {
+    // 判断题题干里可能残留括号答案。
+    // ⚠️ 明确标记为单选/多选的题不能被降级成判断题（否则选项解析失败会变成"正确/错误"）
+    var canBeJudge = typeHint !== 'single' && typeHint !== 'multi';
+    if (/判/.test(typeHint) || (canBeJudge && !Object.keys(opts).length && ansRaw)) {
       var pr0 = parseAnswer(ansRaw);
       if (pr0.isJudge) {
         return toQuestion({
