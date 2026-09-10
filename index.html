@@ -3460,12 +3460,63 @@ Model 101/103 单相/三相逆变器
         #s-exam .exam-intro{font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:12px}
         #s-exam .exam-intro b{color:var(--acc)}
         #s-exam .exam-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+        #s-exam .exam-banks{display:flex;gap:6px;padding:3px;background:var(--bg2);border:1px solid var(--bd);border-radius:9px}
+        #s-exam .exam-bank{padding:6px 14px;border-radius:6px;cursor:pointer;border:none;
+          background:transparent;color:var(--tx2);font-size:12px;font-weight:700;transition:all .15s;
+          display:flex;align-items:center;gap:6px}
+        #s-exam .exam-bank:hover{color:var(--acc)}
+        #s-exam .exam-bank.on{background:var(--acc);color:#000}
+        #s-exam .exam-bank-n{font-size:10px;font-family:var(--mono);opacity:.7;font-weight:600}
+        #s-exam .exam-bank-title{color:var(--acc);font-weight:600}
         #s-exam .exam-modes{display:flex;gap:8px}
         #s-exam .exam-mode{padding:7px 16px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);
           background:var(--bg2);color:var(--tx2);font-size:12px;font-weight:600;transition:all .15s}
         #s-exam .exam-mode:hover{color:var(--acc);border-color:var(--acc4)}
         #s-exam .exam-mode.on{background:var(--acc);color:#000;border-color:var(--acc)}
         #s-exam .exam-meta{font-size:11px;color:var(--tx3);font-family:var(--mono)}
+
+        /* 实操视频导航 */
+        #s-exam .exam-v-intro{font-size:12px;color:var(--tx2);background:var(--bg2);
+          border:1px solid var(--bd);border-radius:9px;padding:10px 14px;line-height:1.75;margin-bottom:10px}
+        #s-exam .exam-v-intro b{color:var(--acc)}
+        #s-exam .exam-v-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+        #s-exam .exam-v-cat{padding:6px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);
+          background:var(--bg2);color:var(--tx2);font-size:11px;transition:all .15s}
+        #s-exam .exam-v-cat:hover{color:var(--acc);border-color:var(--acc4)}
+        #s-exam .exam-v-cat.on{background:var(--acc3);color:var(--acc);border-color:var(--acc4)}
+        #s-exam .exam-v-search{position:relative;margin-bottom:10px}
+        #s-exam .exam-v-input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--tx);
+          border:1px solid var(--bd);border-radius:7px;padding:9px 12px;font-size:12.5px}
+        #s-exam .exam-v-input:focus{outline:none;border-color:var(--acc)}
+        #s-exam .exam-v-clr{position:absolute;right:6px;top:50%;transform:translateY(-50%);
+          background:var(--bg3);color:var(--tx2);border:0;border-radius:5px;padding:3px 8px;font-size:10.5px;cursor:pointer}
+        #s-exam .exam-v-catd{font-size:12px;color:var(--tx2);padding:8px 12px;background:var(--bg2);
+          border:1px solid var(--bd);border-radius:7px;margin-bottom:10px}
+        #s-exam .exam-v-catd b{color:var(--tx);margin:0 4px}
+        #s-exam .exam-v-empty{text-align:center;color:var(--tx3);font-size:12px;
+          padding:30px 0;border:1px dashed var(--bd);border-radius:9px}
+        #s-exam .exam-v-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+        #s-exam .exam-v-card{display:block;background:var(--bg2);border:1px solid var(--bd);
+          border-radius:9px;padding:12px 14px;text-decoration:none;color:var(--tx);transition:all .15s}
+        #s-exam .exam-v-card:hover{border-color:var(--acc);background:var(--bg3);transform:translateY(-1px)}
+        #s-exam .exam-v-card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;font-size:13px;font-weight:700}
+        #s-exam .exam-v-open{color:var(--tx3);font-size:14px;margin-left:6px}
+        #s-exam .exam-v-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+        #s-exam .exam-v-lv{font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--bd);
+          color:var(--tx2);font-family:var(--mono);letter-spacing:.5px}
+        #s-exam .exam-v-lv.lv-low{background:var(--info2,var(--bg3));color:var(--info,var(--tx3))}
+        #s-exam .exam-v-lv.lv-high{background:var(--warn2,var(--bg3));color:var(--warn,var(--tx3))}
+        #s-exam .exam-v-src{font-size:10.5px;color:var(--tx3)}
+        #s-exam .exam-v-free{font-size:10px;color:var(--ok);border:1px solid var(--ok);
+          border-radius:4px;padding:1px 5px;background:rgba(16,185,129,.1)}
+        #s-exam .exam-v-pay{font-size:10px;color:var(--tx3);border:1px solid var(--bd);
+          border-radius:4px;padding:1px 5px}
+        #s-exam .exam-v-d{font-size:11.5px;color:var(--tx2);line-height:1.65;margin-bottom:6px}
+        #s-exam .exam-v-url{font-size:10px;color:var(--tx3);font-family:var(--mono);
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        #s-exam .exam-v-tip{font-size:11.5px;color:var(--tx2);background:var(--bg2);
+          border:1px solid var(--bd);border-radius:7px;padding:9px 14px;line-height:1.7;margin-top:10px}
+        #s-exam .exam-v-tip b{color:var(--acc)}
         #s-exam .exam-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
         #s-exam .exam-cat{padding:5px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);
           background:var(--bg2);color:var(--tx2);font-size:11px;transition:all .15s}
@@ -3491,6 +3542,64 @@ Model 101/103 单相/三相逆变器
         #s-exam .exam-imp-msg .bad{color:var(--err)}
         #s-exam .exam-imp-msg b{color:var(--acc)}
         #s-exam .exam-imp-warn{margin-top:8px;font-size:11px;color:var(--tx3);line-height:1.6}
+        /* ---- 统计卡 ---- */
+        #s-exam .exam-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+        #s-exam .exam-stat{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:10px 6px;text-align:center}
+        #s-exam .exam-stat-n{font-size:19px;font-weight:800;color:var(--acc);font-family:var(--mono);line-height:1.2}
+        #s-exam .exam-stat-l{font-size:11px;color:var(--tx3);margin-top:2px}
+        /* ---- 视图切换（单题刷题 / 列表背题）---- */
+        #s-exam .exam-views{display:flex;gap:8px;margin-bottom:10px}
+        #s-exam .exam-view{padding:6px 15px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);
+          background:var(--bg2);color:var(--tx2);font-size:12px;font-weight:600;transition:all .15s}
+        #s-exam .exam-view:hover{color:var(--acc);border-color:var(--acc4)}
+        #s-exam .exam-view.on{background:var(--acc);color:#000;border-color:var(--acc)}
+        /* ---- 刷题范围筛选 ---- */
+        #s-exam .exam-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+        #s-exam .exam-filter{padding:5px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);
+          background:var(--bg2);color:var(--tx2);font-size:11px;transition:all .15s}
+        #s-exam .exam-filter:hover{color:var(--acc);border-color:var(--acc4)}
+        #s-exam .exam-filter.on{background:var(--acc3);color:var(--acc);border-color:var(--acc4)}
+        #s-exam .exam-filter-n{font-family:var(--mono);opacity:.75;margin-left:2px}
+        /* ---- 刷题进度条 ---- */
+        #s-exam .exam-drill-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+          background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:9px 14px;margin-bottom:9px;flex-wrap:wrap}
+        #s-exam .exam-drill-name{font-size:11px;color:var(--tx3)}
+        /* ---- 设置开关 ---- */
+        #s-exam .exam-sets{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:11px;padding:0 2px}
+        #s-exam .exam-set{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--tx2);user-select:none}
+        #s-exam .exam-set input{width:15px;height:15px;accent-color:var(--acc);cursor:pointer;margin:0}
+        #s-exam .exam-set:hover{color:var(--acc)}
+        /* ---- 题目操作行 + 收藏按钮 ---- */
+        #s-exam .exam-q-acts{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+        #s-exam .exam-fav{padding:6px 13px;border-radius:7px;cursor:pointer;border:1px solid var(--bd);
+          background:var(--bg3);color:var(--tx2);font-size:11.5px;transition:all .15s}
+        #s-exam .exam-fav:hover{border-color:var(--warn);color:var(--warn)}
+        #s-exam .exam-fav.on{background:var(--warn);color:#000;border-color:var(--warn);font-weight:600}
+        /* ---- 进度点 ---- */
+        #s-exam .exam-dots{display:flex;flex-wrap:wrap;gap:4px;margin-top:12px;padding:0 2px}
+        #s-exam .exam-dot{min-width:28px;height:28px;padding:0 5px;box-sizing:border-box;border-radius:6px;cursor:pointer;
+          border:1px solid var(--bd);background:var(--bg2);color:var(--tx3);font-size:10.5px;font-family:var(--mono);transition:all .15s}
+        #s-exam .exam-dot:hover{border-color:var(--acc4);color:var(--acc)}
+        #s-exam .exam-dot.ok{background:var(--ok);color:#000;border-color:var(--ok);font-weight:700}
+        #s-exam .exam-dot.bad{background:var(--err);color:#000;border-color:var(--err);font-weight:700}
+        #s-exam .exam-dot.cur{outline:2px solid var(--acc);outline-offset:1px}
+        /* ---- 考试记录 ---- */
+        #s-exam .exam-rec-sum{font-size:12px;color:var(--tx2);margin-bottom:11px}
+        #s-exam .exam-rec-sum b{color:var(--acc);font-family:var(--mono)}
+        #s-exam .exam-records{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+        #s-exam .exam-rec{display:flex;align-items:center;gap:11px;background:var(--bg2);
+          border:1px solid var(--bd);border-left:3px solid var(--tx3);border-radius:8px;padding:9px 13px}
+        #s-exam .exam-rec.ok{border-left-color:var(--ok)}
+        #s-exam .exam-rec.bad{border-left-color:var(--err)}
+        #s-exam .exam-rec-l{flex:1;min-width:0}
+        #s-exam .exam-rec-d{font-size:12px;color:var(--tx);font-weight:600}
+        #s-exam .exam-rec-i{font-size:11px;color:var(--tx3);margin-top:2px}
+        #s-exam .exam-rec-s{font-size:20px;font-weight:800;color:var(--acc);font-family:var(--mono);line-height:1}
+        #s-exam .exam-rec-s span{font-size:11px;font-weight:600;margin-left:1px}
+        #s-exam .exam-rec-tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px}
+        #s-exam .exam-rec.ok .exam-rec-tag{background:var(--ok);color:#000}
+        #s-exam .exam-rec.bad .exam-rec-tag{background:var(--err);color:#000}
+        #s-exam .exam-empty{padding:34px 18px;text-align:center}
         #s-exam .exam-actions{display:flex;align-items:center;gap:12px;margin-bottom:12px}
         #s-exam .exam-done{font-size:11px;color:var(--tx3);font-family:var(--mono)}
         #s-exam .exam-q{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:13px 14px;margin-bottom:10px}
@@ -3611,8 +3720,10 @@ Model 101/103 单相/三相逆变器
 <script src="music.js?v=20260829-6"></script>
 <script src="ipscan.js?v=20260907-1"></script>
 <script src="toolbox.js?v=20260906-2"></script>
-<script src="examimport.js?v=20260909-1"></script>
-<script src="exam.js?v=20260909-1"></script>
+<script src="examimport.js?v=20260910-1"></script>
+<script src="exam_high.js?v=20260910-1"></script>
+<script src="examvideo.js?v=20260910-1"></script>
+<script src="exam.js?v=20260910-1"></script>
 <script>
 /* 启动页 + 自我介绍页切换 */
 (function(){
