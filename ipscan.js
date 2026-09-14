@@ -828,9 +828,40 @@
   /* --------------------------------------------------------------- 初始化 */
   // 不随页面加载自动探测：本工具主打离线，探测本机 IP 需触发一次 WebRTC/STUN，
   // 只在用户真正打开这一页时才做，避免每次开首页都发起无谓的网络活动。
+
+  /* 运行协议环境提示：这是「扫不出来」最常见、也最容易被忽略的根因。
+     浏览器沙箱下，探测只能发 http://IP:端口 的建连请求：
+       · 页面本身是 https  → 所有 http:// 请求被「混合内容」策略拦截，扫出来恒为 0；
+       · 页面是 file://    → 部分浏览器（Chrome）对 file 源发起的 fetch 有限制，可能探测失败；
+       · http(s)://localhost → 正常，推荐。 */
+  function contextWarn() {
+    var el = $('ip-ctx-warn');
+    if (!el) return;
+    var proto = (location.protocol || '').toLowerCase();
+    var html, bg, bd, fg;
+    if (proto === 'https:') {
+      fg = '#ffb4a8'; bg = 'rgba(239,68,68,.12)'; bd = 'var(--err)';
+      html = '<b>⚠ 当前页面是 HTTPS</b>：浏览器会拦截所有 <code>http://</code> 局域网探测请求（混合内容策略），' +
+             'IP 扫描将<b>扫不到任何设备</b>。请用 <b>file://</b> 双击打开本页，或在本地起服务器以 <b>http://localhost</b> 访问（不要走 https）。';
+    } else if (proto === 'file:') {
+      fg = '#ffd08a'; bg = 'rgba(255,176,32,.12)'; bd = 'var(--warn)';
+      html = '<b>提示</b>：以 <code>file://</code> 打开时，部分浏览器（Chrome）对脚本发起的 <code>fetch</code> 有限制，可能导致探测失败。' +
+             '更稳妥的做法：在项目目录执行 <code>python -m http.server 8000</code>，再访问 <b>http://localhost:8000</b>。';
+    } else {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'block';
+    el.style.background = bg;
+    el.style.border = '1px solid ' + bd;
+    el.style.color = fg;
+    el.innerHTML = html;
+  }
+
   function init() {
     var sec = $('s-ipscan');
     if (!sec) return;
+    contextWarn();
     var fired = false;
     function check() {
       if (fired) return;
