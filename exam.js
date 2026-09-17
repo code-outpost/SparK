@@ -6295,15 +6295,22 @@
     var h = renderBar();
     h += renderStats();
     h += renderImport();
-    // 视图切换：单题刷题 / 列表背题
+    // 视图切换：单题刷题 / 列表背题（置于顶部，贴近题目）
     h += '<div class="exam-views">';
     h += '<button class="exam-view' + (S.view === 'drill' ? ' on' : '') + '" onclick="examSetView(\'drill\')">单题刷题</button>';
     h += '<button class="exam-view' + (S.view === 'list' ? ' on' : '') + '" onclick="examSetView(\'list\')">列表背题</button>';
     h += '</div>';
-    h += renderCats();
-    h += renderFilter();
-    if (S.view === 'drill') h += renderDrill();
-    else h += renderList();
+    if (S.view === 'drill') {
+      // 单题刷题：题目优先置顶，分类 / 筛选移到底部，避免题目沉到页面下方
+      h += renderDrill();
+      h += '<div class="exam-range-t">练习范围（点选可切换，题目自动更新）</div>';
+      h += renderCats();
+      h += renderFilter();
+    } else {
+      h += renderCats();
+      h += renderFilter();
+      h += renderList();
+    }
     return h;
   }
 
@@ -6346,7 +6353,7 @@
         var t = list[i]; list[i] = list[j]; list[j] = t;
       }
     }
-    S.drill = { list: list, idx: 0 };
+    S.drill = { list: list, idx: 0, ans: {} };   // ans：本会话答题态，重开一轮不清全局答案但显示空白
   }
   function renderDrill() {
     if (!S.drill) buildDrill();
@@ -6358,7 +6365,7 @@
     if (d.idx >= d.list.length) d.idx = d.list.length - 1;
     if (d.idx < 0) d.idx = 0;
     var q = d.list[d.idx];
-    var sel = D.answers[q.id];
+    var sel = (S.drill && S.drill.ans) ? S.drill.ans[q.id] : undefined;   // 读本会话答案，避免「再来一轮」仍显示上一轮
     var answered = sel != null;
     var correct = answered && isCorrect(q, sel);
     var isFav = D.fav.indexOf(String(q.id)) >= 0;
@@ -6434,7 +6441,7 @@
     var step = total > max ? Math.ceil(total / max) : 1;
     for (var i = 0; i < total; i += step) {
       var q = d.list[i], cls = 'exam-dot';
-      var a = D.answers[q.id];
+      var a = (S.drill && S.drill.ans) ? S.drill.ans[q.id] : D.answers[q.id];   // 进度点按本会话答案着色
       if (a != null) cls += isCorrect(q, a) ? ' ok' : ' bad';
       if (i === d.idx) cls += ' cur';
       h += '<button class="' + cls + '" title="第 ' + (i + 1) + ' 题" onclick="examDrillJump(' + i + ')">' + (i + 1) + '</button>';
@@ -6748,6 +6755,7 @@
   // 记录一次作答：写 answers、错题本，返回是否正确
   function recordAnswer(q, sel) {
     D.answers[q.id] = sel;
+    if (S.drill) S.drill.ans[q.id] = sel;   // 本会话答题态：重开一轮不会显示上一轮答案
     var correct = isCorrect(q, sel);
     var sid = String(q.id);
     if (correct) {
@@ -6768,7 +6776,7 @@
   window.examDrillPick = function (k) {
     if (!S.drill) return;
     var d = S.drill, q = d.list[d.idx];
-    if (!q || D.answers[q.id] != null) return;   // 已判分后不再改
+    if (!q || (S.drill && S.drill.ans[q.id] != null)) return;   // 已判分后不再改（按本会话答案判断）
     if (q.type === 'multi') {
       // 多选题：先暂存，点「确认提交」才判分
       var cur = S.multiSel ? S.multiSel.split('') : [];
@@ -6799,6 +6807,7 @@
     var q = S.drill.list[S.drill.idx];
     if (!q) return;
     delete D.answers[q.id];
+    if (S.drill) delete S.drill.ans[q.id];   // 同步清本会话答案，重做本题后该题恢复空白
     S.multiSel = '';
     saveStore('answers');
     render();
